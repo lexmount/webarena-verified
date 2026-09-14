@@ -8593,7 +8593,7 @@
       },
       {
         "evaluator": "NetworkEventEvaluator",
-        "expected": {"url": "^__GITLAB__/a11yproject/a11yproject.com/-/issues/.*$"},
+        "expected": {"url": "^__GITLAB__/a11yproject/a11yproject\\.com/-/issues/?$"},
         "ignored_query_params_patterns": [".*"]
       },
       {
@@ -8608,7 +8608,7 @@
         }
       }
     ],
-    "revision": 2
+    "revision": 3
   },
   {
     "sites": ["gitlab"],
@@ -12232,14 +12232,13 @@
           "post_data": {
             "project[name]": "chatgpt_plugin",
             "project[namespace_id]": "2505",
-            "project[path]": "chatgpt_plugin",
-            "project[initialize_with_readme]": "0"
+            "project[path]": "chatgpt_plugin"
           },
           "response_status": 302
         }
       }
     ],
-    "revision": 2
+    "revision": 3
   },
   {
     "sites": ["gitlab"],
@@ -16695,7 +16694,7 @@
       {
         "evaluator": "NetworkEventEvaluator",
         "expected": {
-          "url": ["__REDDIT__/submit", "__REDDIT__/submit/consoles"],
+          "url": ["__REDDIT__/submit", "__REDDIT__/submit/consoles", "__REDDIT__/submit/gaming"],
           "http_method": "POST",
           "post_data": {
             "submission[title]": "what is the recommended console to buy these days?",
@@ -16705,7 +16704,7 @@
         }
       }
     ],
-    "revision": 2
+    "revision": 3
   },
   {
     "sites": ["reddit"],
@@ -16843,7 +16842,7 @@
       {
         "evaluator": "NetworkEventEvaluator",
         "expected": {
-          "url": ["__REDDIT__/submit", "__REDDIT__/submit/consoles"],
+          "url": ["__REDDIT__/submit", "__REDDIT__/submit/consoles", "__REDDIT__/submit/gaming"],
           "http_method": "POST",
           "post_data": {
             "submission[title]": "what is the recommended console to buy these days",
@@ -16853,7 +16852,7 @@
         }
       }
     ],
-    "revision": 2
+    "revision": 3
   },
   {
     "sites": ["reddit"],
@@ -16965,7 +16964,7 @@
       {
         "evaluator": "NetworkEventEvaluator",
         "expected": {
-          "url": ["__REDDIT__/submit", "__REDDIT__/submit/deeplearning"],
+          "url": ["__REDDIT__/submit", "__REDDIT__/submit/deeplearning", "__REDDIT__/submit/technology"],
           "http_method": "POST",
           "post_data": {
             "submission[title]": "what is the SOTA web navigation agent repo",
@@ -16975,7 +16974,7 @@
         }
       }
     ],
-    "revision": 2
+    "revision": 3
   },
   {
     "sites": ["reddit"],
@@ -17473,7 +17472,7 @@
       {
         "evaluator": "NetworkEventEvaluator",
         "expected": {
-          "url": ["__REDDIT__/submit", "__REDDIT__/submit/deeplearning"],
+          "url": ["__REDDIT__/submit", "__REDDIT__/submit/deeplearning", "__REDDIT__/submit/technology"],
           "http_method": "POST",
           "post_data": {
             "submission[title]": "the effectiveness of deep learning",
@@ -17484,7 +17483,7 @@
         }
       }
     ],
-    "revision": 2
+    "revision": 3
   },
   {
     "sites": ["reddit"],
@@ -19058,6 +19057,7 @@
       },
       {
         "evaluator": "NetworkEventEvaluator",
+        "last_event_only": false,
         "expected": {
           "url": "^__SHOPPING_ADMIN__/mui/index/render/.*$",
           "headers": {"referer": "__SHOPPING_ADMIN__/sales/order/"},
@@ -19072,7 +19072,7 @@
         "ignored_query_params_patterns": ["^paging", "^sorting", "isAjax"]
       }
     ],
-    "revision": 2
+    "revision": 3
   },
   {
     "sites": ["shopping_admin"],
@@ -19859,15 +19859,15 @@
           "response_status": 302,
           "post_data": {
             "name": "spring sale",
-            "website_ids": [1],
-            "customer_group_ids": [1],
+            "website_ids[0]": "1",
+            "customer_group_ids[0]": "1",
             "simple_action": "by_percent",
             "discount_amount": 20
           }
         }
       }
     ],
-    "revision": 2
+    "revision": 3
   },
   {
     "sites": ["shopping_admin"],
@@ -19891,15 +19891,15 @@
           "response_status": 302,
           "post_data": {
             "name": "fall discount",
-            "website_ids": [1],
-            "customer_group_ids": [1],
+            "website_ids[0]": "1",
+            "customer_group_ids[0]": "1",
             "simple_action": "cart_fixed",
             "discount_amount": 10
           }
         }
       }
     ],
-    "revision": 2
+    "revision": 3
   },
   {
     "sites": ["shopping_admin"],

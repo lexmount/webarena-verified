@@ -575,13 +575,6 @@ class NetworkEventEvaluator(BaseEvaluator[NetworkEventEvaluatorCfg]):
         if not events:
             return ()
 
-        # Handle navigate tasks (We only care about the last navigation event)
-        # For cases where we check navigation events via subsequent XHR/fetch requests,
-        # we use the normal filtering logic below.
-        if context.task.is_navigate_task and config.expected.http_method == "GET":
-            last_navigation_event = [e for e in events if e.is_navigation_event]
-            return (last_navigation_event[-1],) if last_navigation_event else ()
-
         matches = []
         try:
             expected_url: URL = self._normalized_url(config.expected.url, context=context, config=config, strict=True)  # type: ignore
