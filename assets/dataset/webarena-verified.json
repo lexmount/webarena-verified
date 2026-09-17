@@ -12232,7 +12232,8 @@
           "post_data": {
             "project[name]": "chatgpt_plugin",
             "project[namespace_id]": "2505",
-            "project[path]": "chatgpt_plugin"
+            "project[path]": "chatgpt_plugin",
+            "project[initialize_with_readme]": [null, "0"]
           },
           "response_status": 302
         }
@@ -16694,7 +16695,7 @@
       {
         "evaluator": "NetworkEventEvaluator",
         "expected": {
-          "url": ["__REDDIT__/submit", "__REDDIT__/submit/consoles", "__REDDIT__/submit/gaming"],
+          "url": ["__REDDIT__/submit", "__REDDIT__/submit/consoles"],
           "http_method": "POST",
           "post_data": {
             "submission[title]": "what is the recommended console to buy these days?",
@@ -16704,7 +16705,7 @@
         }
       }
     ],
-    "revision": 3
+    "revision": 2
   },
   {
     "sites": ["reddit"],
@@ -16842,7 +16843,7 @@
       {
         "evaluator": "NetworkEventEvaluator",
         "expected": {
-          "url": ["__REDDIT__/submit", "__REDDIT__/submit/consoles", "__REDDIT__/submit/gaming"],
+          "url": ["__REDDIT__/submit", "__REDDIT__/submit/consoles"],
           "http_method": "POST",
           "post_data": {
             "submission[title]": "what is the recommended console to buy these days",
@@ -16852,7 +16853,7 @@
         }
       }
     ],
-    "revision": 3
+    "revision": 2
   },
   {
     "sites": ["reddit"],
@@ -16964,7 +16965,7 @@
       {
         "evaluator": "NetworkEventEvaluator",
         "expected": {
-          "url": ["__REDDIT__/submit", "__REDDIT__/submit/deeplearning", "__REDDIT__/submit/technology"],
+          "url": ["__REDDIT__/submit", "__REDDIT__/submit/deeplearning"],
           "http_method": "POST",
           "post_data": {
             "submission[title]": "what is the SOTA web navigation agent repo",
@@ -16974,7 +16975,7 @@
         }
       }
     ],
-    "revision": 3
+    "revision": 2
   },
   {
     "sites": ["reddit"],
@@ -17472,7 +17473,7 @@
       {
         "evaluator": "NetworkEventEvaluator",
         "expected": {
-          "url": ["__REDDIT__/submit", "__REDDIT__/submit/deeplearning", "__REDDIT__/submit/technology"],
+          "url": ["__REDDIT__/submit", "__REDDIT__/submit/deeplearning"],
           "http_method": "POST",
           "post_data": {
             "submission[title]": "the effectiveness of deep learning",
@@ -17483,7 +17484,7 @@
         }
       }
     ],
-    "revision": 3
+    "revision": 2
   },
   {
     "sites": ["reddit"],
@@ -19057,7 +19058,8 @@
       },
       {
         "evaluator": "NetworkEventEvaluator",
-        "last_event_only": false,
+        "navigation_only": false,
+        "event_query_params": {"namespace": "sales_order_grid"},
         "expected": {
           "url": "^__SHOPPING_ADMIN__/mui/index/render/.*$",
           "headers": {"referer": "__SHOPPING_ADMIN__/sales/order/"},

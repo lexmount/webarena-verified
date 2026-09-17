@@ -4,6 +4,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from webarena_verified.api import WebArenaVerified
 from webarena_verified.types.config import WebArenaVerifiedConfig
 from webarena_verified.types.eval import EvalStatus
@@ -36,7 +38,8 @@ def _entry(url: str, *, referer: str, navigation: bool) -> dict[str, Any]:
     }
 
 
-def test_navigate_task_can_be_verified_by_a_matching_xhr(tmp_path: Path) -> None:
+@pytest.mark.parametrize("ending", ["fraud", "notification", "cleared", "left_page", "reloaded"])
+def test_navigate_task_checks_the_final_order_grid(tmp_path: Path, ending: str) -> None:
     base_url = "http://localhost:7780/admin"
     trace = {
         "log": {
@@ -57,11 +60,38 @@ def test_navigate_task_can_be_verified_by_a_matching_xhr(tmp_path: Path) -> None
             ],
         }
     }
+    if ending == "notification":
+        trace["log"]["entries"].append(
+            _entry(
+                f"{base_url}/mui/index/render/?namespace=notification_area",
+                referer=f"{base_url}/sales/order/",
+                navigation=False,
+            )
+        )
+    elif ending == "cleared":
+        trace["log"]["entries"].append(
+            _entry(
+                f"{base_url}/mui/index/render/?namespace=sales_order_grid&search="
+                "&keywordUpdated=false&filters%5Bplaceholder%5D=true",
+                referer=f"{base_url}/sales/order/",
+                navigation=False,
+            )
+        )
+    elif ending in {"left_page", "reloaded"}:
+        path = "admin/dashboard/" if ending == "left_page" else "sales/order/"
+        trace["log"]["entries"].append(
+            _entry(
+                f"{base_url}/{path}",
+                referer=f"{base_url}/sales/order/",
+                navigation=True,
+            )
+        )
     trace_path = tmp_path / "network.har"
     trace_path.write_text(json.dumps(trace))
 
     evaluator = WebArenaVerified(
         config=WebArenaVerifiedConfig(
+            test_data_file=Path(__file__).parents[2] / "assets/dataset/webarena-verified.json",
             environments={
                 "__SHOPPING_ADMIN__": {
                     "urls": [base_url],
@@ -69,7 +99,7 @@ def test_navigate_task_can_be_verified_by_a_matching_xhr(tmp_path: Path) -> None
                     "use_header_login": True,
                     "credentials": {"username": "admin", "password": "admin1234"},
                 }
-            }
+            },
         )
     )
     result = evaluator.evaluate_task(
@@ -78,5 +108,4 @@ def test_navigate_task_can_be_verified_by_a_matching_xhr(tmp_path: Path) -> None
         network_trace=trace_path,
     )
 
-    assert result.status == EvalStatus.SUCCESS
-    assert result.score == 1.0
+    assert (result.status == EvalStatus.SUCCESS) is (ending in {"fraud", "notification"})

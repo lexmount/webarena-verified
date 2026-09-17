@@ -10893,8 +10893,7 @@
         "expected": {
           "url": [
             "__REDDIT__/submit",
-            "__REDDIT__/submit/deeplearning",
-            "__REDDIT__/submit/technology"
+            "__REDDIT__/submit/deeplearning"
           ],
           "headers": null,
           "query_params": null,
@@ -10923,7 +10922,7 @@
     "instantiation_dict": {
       "topic": "the effectiveness of deep learning"
     },
-    "revision": 3
+    "revision": 2
   },
   {
     "sites": [

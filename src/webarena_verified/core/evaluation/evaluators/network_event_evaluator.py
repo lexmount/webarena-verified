@@ -8,6 +8,7 @@ import re
 from functools import partial
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, cast
+from urllib.parse import parse_qs, urlsplit
 
 from webarena_verified.core.evaluation.data_types import URL
 from webarena_verified.core.utils import logger
@@ -558,6 +559,26 @@ class NetworkEventEvaluator(BaseEvaluator[NetworkEventEvaluatorCfg]):
             response_cookies=response_cookies,
         )
 
+    @staticmethod
+    def _select_navigation_events(
+        events: tuple[NetworkEvent, ...], context: TaskEvalContext, config: NetworkEventEvaluatorCfg
+    ) -> tuple[tuple[NetworkEvent, ...], bool]:
+        if not (context.task.is_navigate_task and config.expected.http_method == "GET"):
+            return events, False
+        navigations = [index for index, event in enumerate(events) if event.is_navigation_event]
+        if not navigations:
+            return (), True
+        last_navigation = navigations[-1]
+        if config.navigation_only:
+            return (events[last_navigation],), True
+        # Earlier XHRs describe a page the agent has left or reloaded.
+        return events[last_navigation + 1 :], False
+
+    @staticmethod
+    def _matches_event_query(event: NetworkEvent, config: NetworkEventEvaluatorCfg) -> bool:
+        query = parse_qs(urlsplit(event.url).query, keep_blank_values=True)
+        return all(query.get(key) == [value] for key, value in (config.event_query_params or {}).items())
+
     def _filter_events_by_criteria(
         self, events: tuple[NetworkEvent, ...], context: TaskEvalContext, config: NetworkEventEvaluatorCfg
     ) -> tuple[NetworkEvent, ...]:
@@ -572,8 +593,9 @@ class NetworkEventEvaluator(BaseEvaluator[NetworkEventEvaluatorCfg]):
             Filtered list of events matching URL and headers criteria
         """
 
-        if not events:
-            return ()
+        events, final_navigation = self._select_navigation_events(events, context, config)
+        if final_navigation or not events:
+            return events
 
         matches = []
         try:
@@ -588,6 +610,8 @@ class NetworkEventEvaluator(BaseEvaluator[NetworkEventEvaluatorCfg]):
             raise
 
         for event in events:
+            if not self._matches_event_query(event, config):
+                continue
             # Check HTTP method
             if config.expected.http_method and event.http_method.lower() != config.expected.http_method.lower():
                 continue
