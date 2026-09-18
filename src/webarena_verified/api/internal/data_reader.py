@@ -7,7 +7,7 @@ from webarena_verified.types.config import WebArenaVerifiedConfig
 from webarena_verified.types.data import TaskSubset
 from webarena_verified.types.task import WebArenaSite, WebArenaVerifiedTask
 
-TOTAL_TASK_COUNT = 812
+TOTAL_TASK_COUNT = 811
 
 
 class WebArenaVerifiedDataReader:
@@ -98,7 +98,7 @@ class WebArenaVerifiedDataReader:
         """Load and return the test data as a list of VerifiedTask objects.
 
         If a subset is provided, only load tasks specified in the subset and skip
-        the 812-task count validation. Validates that all subset task_ids exist in
+        the 811-task count validation. Validates that all subset task_ids exist in
         the dataset (fail fast).
         """
         logger.info(f"Loading tasks from: {str(self.config.test_data_file.resolve())!r}")
@@ -117,11 +117,11 @@ class WebArenaVerifiedDataReader:
             except Exception as e:
                 raise ValueError(f"Failed to parse task with id {task.get('task_id', 'unknown')}: {e}") from e
 
-        # If subset is provided, filter tasks and skip 812-task validation
+        # If subset is provided, filter tasks and skip 811-task validation
         if self.subset is not None:
             return self._filter_tasks_by_subset(task_map)
 
-        # No subset: validate full dataset has 812 tasks
+        # No subset: validate full dataset has 811 tasks
         if len(task_map) != TOTAL_TASK_COUNT:
             # Sanity to avoid loading incomplete data
             raise ValueError(f"Expected {TOTAL_TASK_COUNT} tasks, but found {len(task_map)}")

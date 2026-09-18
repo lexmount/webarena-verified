@@ -10,7 +10,7 @@ wa = WebArenaVerified()
 
 # Get all tasks
 tasks = wa.get_tasks()
-print(len(tasks))  # 812 tasks in the full benchmark
+print(len(tasks))  # 811 tasks in the full benchmark
 
 # Get a specific task
 task = wa.get_task(42)

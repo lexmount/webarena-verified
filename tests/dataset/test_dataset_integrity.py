@@ -18,12 +18,14 @@ def test_data_coverage(
     dataset_by_task_id: dict[int, dict[str, Any]],
     original_by_task_id: dict[int, dict[str, Any]],
 ) -> None:
-    """Verify dataset coverage matches original data."""
-    assert len(dataset) == len(original_dataset), (
-        f"Task count mismatch: current has {len(dataset)}, original has {len(original_dataset)}"
-    )
+    """Verify dataset coverage matches source data after the documented exclusion."""
+    excluded_ids = {243}
+    assert len(dataset) == len(original_dataset) - len(excluded_ids)
+    assert not excluded_ids & dataset_by_task_id.keys()
 
     for task_id, original_task in original_by_task_id.items():
+        if task_id in excluded_ids:
+            continue
         assert task_id in dataset_by_task_id, f"Missing task_id {task_id}"
         current_task = dataset_by_task_id[task_id]
         assert current_task["intent_template_id"] == original_task["intent_template_id"], (
@@ -39,14 +41,16 @@ def test_data_coverage(
 
     # Compare site distribution
     current_distribution = _get_site_distribution(dataset)
-    original_distribution = _get_site_distribution(original_dataset)
+    original_distribution = _get_site_distribution(
+        [task for task in original_dataset if task["task_id"] not in excluded_ids]
+    )
 
     assert current_distribution == original_distribution, (
         f"Site distribution mismatch:\n  Current:  {current_distribution}\n  Original: {original_distribution}"
     )
 
 
-@pytest.mark.parametrize("task_id", range(812))
+@pytest.mark.parametrize("task_id", [i for i in range(812) if i != 243])
 def test_intent_rendering(task_id: int, dataset_by_task_id: dict[int, dict[str, Any]]) -> None:
     """Verify intent matches rendered intent_template for each task."""
     task = dataset_by_task_id[task_id]
@@ -65,7 +69,7 @@ def test_intent_rendering(task_id: int, dataset_by_task_id: dict[int, dict[str, 
     )
 
 
-@pytest.mark.parametrize("task_id", range(812))
+@pytest.mark.parametrize("task_id", [i for i in range(812) if i != 243])
 def test_eval_config(task_id: int, dataset_by_task_id: dict[int, dict[str, Any]]) -> None:
     """Verify eval configuration matches task type requirements.
 
