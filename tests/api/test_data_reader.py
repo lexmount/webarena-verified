@@ -74,8 +74,8 @@ def temp_dataset_file(tmp_path: Path) -> Path:
         },
     ]
 
-    # Create 809 more tasks to reach 811 total
-    for i in range(2, 811):
+    # Create 810 more tasks to reach 812 total
+    for i in range(2, 812):
         dataset.append(
             {
                 "sites": ["gitlab"],
@@ -105,9 +105,9 @@ def temp_dataset_file(tmp_path: Path) -> Path:
 # Basic Loading Tests
 # ============================================================================
 def test_load_all_tasks(data_reader: WebArenaVerifiedDataReader):
-    """Test that all 811 tasks load correctly from the actual dataset."""
+    """Test that all 812 tasks load correctly from the actual dataset."""
     tasks = data_reader.tasks
-    assert len(tasks) == 811
+    assert len(tasks) == 812
     assert all(hasattr(task, "task_id") for task in tasks)
     assert all(hasattr(task, "intent") for task in tasks)
 
@@ -274,8 +274,8 @@ def test_duplicate_task_id_error(tmp_path: Path):
 
 
 def test_wrong_task_count_error(tmp_path: Path):
-    """Test that datasets with != 811 tasks raise an error."""
-    # Create dataset with only 2 tasks (should be 811)
+    """Test that datasets with != 812 tasks raise an error."""
+    # Create dataset with only 2 tasks (should be 812)
     dataset = [
         {
             "sites": ["shopping"],
@@ -303,7 +303,7 @@ def test_wrong_task_count_error(tmp_path: Path):
     config = WebArenaVerifiedConfig(test_data_file=file_path)
 
     # Error now happens in __init__ instead of when accessing tasks (no lazy loading)
-    with pytest.raises(ValueError, match="Expected 811 tasks, but found 1"):
+    with pytest.raises(ValueError, match="Expected 812 tasks, but found 1"):
         WebArenaVerifiedDataReader(config)
 
 
@@ -337,7 +337,7 @@ def test_with_temp_dataset(temp_dataset_file: Path):
     reader = WebArenaVerifiedDataReader(config)
 
     tasks = reader.tasks
-    assert len(tasks) == 811
+    assert len(tasks) == 812
 
     # Verify first task
     task_0 = reader.get_task_by_id(0)
@@ -363,7 +363,7 @@ def test_no_lazy_loading(config: WebArenaVerifiedConfig):
     reader = WebArenaVerifiedDataReader(config)
     # Tasks should be loaded in __init__, not lazily
     assert reader._task_id_map is not None
-    assert len(reader._task_id_map) == 811
+    assert len(reader._task_id_map) == 812
 
 
 def test_subset_with_valid_task_ids(temp_dataset_file: Path, tmp_path: Path):
@@ -406,8 +406,8 @@ def test_subset_with_invalid_task_ids(temp_dataset_file: Path):
         WebArenaVerifiedDataReader(config, subset=subset)
 
 
-def test_subset_skips_811_task_validation(tmp_path: Path):
-    """Test that subset loading skips the 811-task count validation."""
+def test_subset_skips_812_task_validation(tmp_path: Path):
+    """Test that subset loading skips the 812-task count validation."""
     from webarena_verified.types.data import TaskSubset
 
     # Create a dataset with only 5 tasks (would normally fail)
@@ -438,7 +438,7 @@ def test_subset_skips_811_task_validation(tmp_path: Path):
 
     # Without subset: should fail
     config = WebArenaVerifiedConfig(test_data_file=file_path)
-    with pytest.raises(ValueError, match="Expected 811 tasks, but found 5"):
+    with pytest.raises(ValueError, match="Expected 812 tasks, but found 5"):
         WebArenaVerifiedDataReader(config)
 
     # With subset: should succeed
@@ -522,7 +522,7 @@ def test_webarenaverfied_get_tasks():
 
     wa = WebArenaVerified()
     tasks = wa.get_tasks()
-    assert len(tasks) == 811
+    assert len(tasks) == 812
     assert all(task.task_id is not None for task in tasks)
 
 
@@ -542,7 +542,7 @@ def wa_api(main_config):
 def test_get_tasks_no_filters(wa_api):
     """Test get_tasks() with no filters returns all tasks."""
     all_tasks = wa_api.get_tasks()
-    assert len(all_tasks) == 811
+    assert len(all_tasks) == 812
     assert all(hasattr(task, "task_id") for task in all_tasks)
 
 

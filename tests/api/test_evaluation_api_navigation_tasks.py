@@ -58,7 +58,7 @@ def _load_dataset(project_root: Path) -> MappingProxyType[int, MappingProxyType[
     """
     dataset_path = project_root / "assets" / "dataset" / "webarena-verified.json"
     tasks_list = json.loads(dataset_path.read_text())
-    assert len(tasks_list) == 811
+    assert len(tasks_list) == 812
 
     # Create immutable mapping indexed by task_id
     tasks_dict = {task["task_id"]: MappingProxyType(task) for task in tasks_list}

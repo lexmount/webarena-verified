@@ -18,13 +18,16 @@ def test_data_coverage(
     dataset_by_task_id: dict[int, dict[str, Any]],
     original_by_task_id: dict[int, dict[str, Any]],
 ) -> None:
-    """Verify dataset coverage matches source data after the documented exclusion."""
-    excluded_ids = {243}
-    assert len(dataset) == len(original_dataset) - len(excluded_ids)
-    assert not excluded_ids & dataset_by_task_id.keys()
+    """Verify full coverage while binding the one independently corrected task."""
+    assert len(dataset) == len(original_dataset) == 812
+    assert set(dataset_by_task_id) == set(original_by_task_id)
+    revised = dataset_by_task_id[243]
+    assert revised["revision"] == 3
+    assert revised["intent_template_id"] == 812
+    assert revised["eval"][0]["expected"]["retrieved_data"] == ["Hannah Lim"]
 
     for task_id, original_task in original_by_task_id.items():
-        if task_id in excluded_ids:
+        if task_id == 243:
             continue
         assert task_id in dataset_by_task_id, f"Missing task_id {task_id}"
         current_task = dataset_by_task_id[task_id]
@@ -41,16 +44,14 @@ def test_data_coverage(
 
     # Compare site distribution
     current_distribution = _get_site_distribution(dataset)
-    original_distribution = _get_site_distribution(
-        [task for task in original_dataset if task["task_id"] not in excluded_ids]
-    )
+    original_distribution = _get_site_distribution(original_dataset)
 
     assert current_distribution == original_distribution, (
         f"Site distribution mismatch:\n  Current:  {current_distribution}\n  Original: {original_distribution}"
     )
 
 
-@pytest.mark.parametrize("task_id", [i for i in range(812) if i != 243])
+@pytest.mark.parametrize("task_id", range(812))
 def test_intent_rendering(task_id: int, dataset_by_task_id: dict[int, dict[str, Any]]) -> None:
     """Verify intent matches rendered intent_template for each task."""
     task = dataset_by_task_id[task_id]
@@ -69,7 +70,7 @@ def test_intent_rendering(task_id: int, dataset_by_task_id: dict[int, dict[str, 
     )
 
 
-@pytest.mark.parametrize("task_id", [i for i in range(812) if i != 243])
+@pytest.mark.parametrize("task_id", range(812))
 def test_eval_config(task_id: int, dataset_by_task_id: dict[int, dict[str, Any]]) -> None:
     """Verify eval configuration matches task type requirements.
 

@@ -6191,6 +6191,27 @@
   },
   {
     "sites": ["shopping_admin"],
+    "task_id": 243,
+    "intent_template_id": 812,
+    "start_urls": ["__SHOPPING_ADMIN__"],
+    "intent": "Get the nickname on the unique lowest-rated review of Circe Hooded Ice Fleece",
+    "intent_template": "Get the nickname on the unique lowest-rated review of {{product}}",
+    "instantiation_dict": {"product": "Circe Hooded Ice Fleece"},
+    "eval": [
+      {
+        "evaluator": "AgentResponseEvaluator",
+        "results_schema": { "type": "array", "items": {"type": "string"} },
+        "expected": {
+          "task_type": "retrieve",
+          "status": "SUCCESS",
+          "retrieved_data": ["Hannah Lim"]
+        }
+      }
+    ],
+    "revision": 3
+  },
+  {
+    "sites": ["shopping_admin"],
     "task_id": 244,
     "intent_template_id": 244,
     "start_urls": ["__SHOPPING_ADMIN__"],

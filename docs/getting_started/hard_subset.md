@@ -2,11 +2,11 @@
 
 ## Overview
 
-**WebArena-Verified Hard** is a carefully curated subset of 258 challenging tasks selected from the full 811-task benchmark. This subset focuses on genuinely difficult tasks while maintaining broad site coverage and category diversity.
+**WebArena-Verified Hard** is a carefully curated subset of 258 challenging tasks selected from the full 812-task benchmark. This subset focuses on genuinely difficult tasks while maintaining broad site coverage and category diversity.
 
 **Why use the hard subset?**
 
-- **Cost-effective evaluation**: Evaluate on 258 tasks instead of 811 while preserving discriminative power
+- **Cost-effective evaluation**: Evaluate on 258 tasks instead of 812 while preserving discriminative power
 - **Difficulty-prioritized**: 48.1% of tasks have predicted success rate ≤ 0.20
 - **Representative coverage**: Maintains balanced distribution across sites and task categories
 
