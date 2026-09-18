@@ -581,13 +581,11 @@
   },
   "67": {
     "exact_match": [
-      "The Hobbit",
-      "A Christmas Carol"
+      "The Hobbit"
     ],
     "valid": {
       "fmt_en_dash": [
-        "The\u2013Hobbit",
-        "A\u2013Christmas\u2013Carol"
+        "The\u2013Hobbit"
       ]
     },
     "invalid": {}
@@ -2212,11 +2210,11 @@
   },
   "243": {
     "exact_match": [
-      "hannah.lim@gmail.com"
+      "Hannah Lim"
     ],
     "valid": {
       "fmt_extra_spaces": [
-        "hannah.lim@gmail.com"
+        "Hannah Lim"
       ]
     },
     "invalid": {}

@@ -458,7 +458,14 @@ class ValueComparator:
             visited.add(actual_id)
 
         # Handle None values
-        if expected is None and actual is None:
+        if actual is None and (
+            expected is None
+            or (
+                isinstance(expected, NormalizedType)
+                and isinstance(expected.raw, (list, tuple))
+                and any(value is None for value in expected.raw)
+            )
+        ):
             return []
 
         if expected is None or actual is None:

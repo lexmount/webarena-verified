@@ -116,9 +116,21 @@ right page:
 
 ### 4. Event Types and Sequencing
 
-Set `event_type` to `"navigation"` to focus on page loads, or to `"modification"` for form
-submissions. The `last_event_only` flag instructs the evaluator to match the most recent event;
-disabling it means "any matching event is sufficient".
+GET checks on navigation tasks validate the final document navigation by default.
+For a page whose state is loaded through XHR or fetch, set `navigation_only` to `false`.
+Only requests after the final document navigation are then eligible, so leaving or
+reloading the page invalidates earlier requests.
+
+`event_query_params` selects a request stream by exact query values, for example
+`{"namespace": "sales_order_grid"}` when several grids share one endpoint. Keep
+the state being checked, such as `filters[status]`, in `expected.query_params`.
+`last_event_only` defaults to `true` and checks the last request in that stream;
+setting it to `false` accepts any matching request and is unsuitable when the task
+requires the final page state.
+
+Expected scalar alternatives may explicitly include `null`, such as `[null, "0"]`
+for an unchecked checkbox that may be omitted or sent as zero. An empty string
+alternative alone does not permit a missing value.
 
 ## Network Trace Structure
 

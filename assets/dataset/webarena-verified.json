@@ -1821,7 +1821,7 @@
         "expected": {
           "task_type": "retrieve",
           "status": "SUCCESS",
-          "retrieved_data": ["The Hobbit", "A Christmas Carol"]
+          "retrieved_data": ["The Hobbit"]
         }
       }
     ],
@@ -1855,8 +1855,7 @@
           "task_type": "retrieve",
           "status": "SUCCESS",
           "retrieved_data": [
-            { "book": "The Hobbit"       , "author": "Tolkien" },
-            { "book": "A Christmas Carol", "author": null      }
+            { "book": "The Hobbit", "author": "Tolkien" }
           ]
         }
       }
@@ -6192,11 +6191,11 @@
   {
     "sites": ["shopping_admin"],
     "task_id": 243,
-    "intent_template_id": 244,
+    "intent_template_id": 812,
     "start_urls": ["__SHOPPING_ADMIN__"],
-    "intent": "Get the email address of the customer who is the most unhappy with Circe fleece",
-    "intent_template": "Get the {{information}} of the customer who is the most unhappy with {{product}}",
-    "instantiation_dict": {"information": "email address", "product": "Circe fleece"},
+    "intent": "Get the nickname on the unique lowest-rated review of Circe Hooded Ice Fleece",
+    "intent_template": "Get the nickname on the unique lowest-rated review of {{product}}",
+    "instantiation_dict": {"product": "Circe Hooded Ice Fleece"},
     "eval": [
       {
         "evaluator": "AgentResponseEvaluator",
@@ -6204,11 +6203,11 @@
         "expected": {
           "task_type": "retrieve",
           "status": "SUCCESS",
-          "retrieved_data": ["hannah.lim@gmail.com"]
+          "retrieved_data": ["Hannah Lim"]
         }
       }
     ],
-    "revision": 2
+    "revision": 3
   },
   {
     "sites": ["shopping_admin"],
@@ -8593,7 +8592,7 @@
       },
       {
         "evaluator": "NetworkEventEvaluator",
-        "expected": {"url": "^__GITLAB__/a11yproject/a11yproject.com/-/issues/.*$"},
+        "expected": {"url": "^__GITLAB__/a11yproject/a11yproject\\.com/-/issues/?$"},
         "ignored_query_params_patterns": [".*"]
       },
       {
@@ -8608,7 +8607,7 @@
         }
       }
     ],
-    "revision": 2
+    "revision": 3
   },
   {
     "sites": ["gitlab"],
@@ -12233,13 +12232,13 @@
             "project[name]": "chatgpt_plugin",
             "project[namespace_id]": "2505",
             "project[path]": "chatgpt_plugin",
-            "project[initialize_with_readme]": "0"
+            "project[initialize_with_readme]": [null, "0"]
           },
           "response_status": 302
         }
       }
     ],
-    "revision": 2
+    "revision": 3
   },
   {
     "sites": ["gitlab"],
@@ -19058,6 +19057,8 @@
       },
       {
         "evaluator": "NetworkEventEvaluator",
+        "navigation_only": false,
+        "event_query_params": {"namespace": "sales_order_grid"},
         "expected": {
           "url": "^__SHOPPING_ADMIN__/mui/index/render/.*$",
           "headers": {"referer": "__SHOPPING_ADMIN__/sales/order/"},
@@ -19072,7 +19073,7 @@
         "ignored_query_params_patterns": ["^paging", "^sorting", "isAjax"]
       }
     ],
-    "revision": 2
+    "revision": 3
   },
   {
     "sites": ["shopping_admin"],
@@ -19859,15 +19860,15 @@
           "response_status": 302,
           "post_data": {
             "name": "spring sale",
-            "website_ids": [1],
-            "customer_group_ids": [1],
+            "website_ids[0]": "1",
+            "customer_group_ids[0]": "1",
             "simple_action": "by_percent",
             "discount_amount": 20
           }
         }
       }
     ],
-    "revision": 2
+    "revision": 3
   },
   {
     "sites": ["shopping_admin"],
@@ -19891,15 +19892,15 @@
           "response_status": 302,
           "post_data": {
             "name": "fall discount",
-            "website_ids": [1],
-            "customer_group_ids": [1],
+            "website_ids[0]": "1",
+            "customer_group_ids[0]": "1",
             "simple_action": "cart_fixed",
             "discount_amount": 10
           }
         }
       }
     ],
-    "revision": 2
+    "revision": 3
   },
   {
     "sites": ["shopping_admin"],
