@@ -228,6 +228,21 @@ class NetworkEventEvaluatorCfg(BaseEval[NetworkEventSpec]):
     last_event_only: bool = True
     """If True, validate only the last matching event. If False, validate if ANY event matches."""
 
+    navigation_only: bool = True
+    """For GET checks on navigation tasks, validate the final document navigation.
+
+    Set False for XHR/fetch checks on the final page. Those checks consider only
+    events after the final document navigation and still honor last_event_only.
+    Other task types and HTTP methods are unaffected.
+    """
+
+    event_query_params: dict[str, str] | None = None
+    """Exact query values that identify an event stream before selecting its last event.
+
+    Use stable identifiers such as a grid namespace, not the state being verified.
+    Expected query_params still validate the selected event's complete state.
+    """
+
     ignored_query_params: tuple[str, ...] | None = None
     """Query parameter names to ignore during comparison (literal matching)."""
 
