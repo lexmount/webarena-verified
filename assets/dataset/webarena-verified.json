@@ -1821,7 +1821,7 @@
         "expected": {
           "task_type": "retrieve",
           "status": "SUCCESS",
-          "retrieved_data": ["The Hobbit", "A Christmas Carol"]
+          "retrieved_data": ["The Hobbit"]
         }
       }
     ],
@@ -1855,8 +1855,7 @@
           "task_type": "retrieve",
           "status": "SUCCESS",
           "retrieved_data": [
-            { "book": "The Hobbit"       , "author": "Tolkien" },
-            { "book": "A Christmas Carol", "author": null      }
+            { "book": "The Hobbit", "author": "Tolkien" }
           ]
         }
       }
