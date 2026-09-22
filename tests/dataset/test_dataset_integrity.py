@@ -18,12 +18,17 @@ def test_data_coverage(
     dataset_by_task_id: dict[int, dict[str, Any]],
     original_by_task_id: dict[int, dict[str, Any]],
 ) -> None:
-    """Verify dataset coverage matches original data."""
-    assert len(dataset) == len(original_dataset), (
-        f"Task count mismatch: current has {len(dataset)}, original has {len(original_dataset)}"
-    )
+    """Verify full coverage while binding the one independently corrected task."""
+    assert len(dataset) == len(original_dataset) == 812
+    assert set(dataset_by_task_id) == set(original_by_task_id)
+    revised = dataset_by_task_id[243]
+    assert revised["revision"] == 3
+    assert revised["intent_template_id"] == 812
+    assert revised["eval"][0]["expected"]["retrieved_data"] == ["Hannah Lim"]
 
     for task_id, original_task in original_by_task_id.items():
+        if task_id == 243:
+            continue
         assert task_id in dataset_by_task_id, f"Missing task_id {task_id}"
         current_task = dataset_by_task_id[task_id]
         assert current_task["intent_template_id"] == original_task["intent_template_id"], (

@@ -1821,7 +1821,7 @@
         "expected": {
           "task_type": "retrieve",
           "status": "SUCCESS",
-          "retrieved_data": ["The Hobbit", "A Christmas Carol"]
+          "retrieved_data": ["The Hobbit"]
         }
       }
     ],
@@ -1855,8 +1855,7 @@
           "task_type": "retrieve",
           "status": "SUCCESS",
           "retrieved_data": [
-            { "book": "The Hobbit"       , "author": "Tolkien" },
-            { "book": "A Christmas Carol", "author": null      }
+            { "book": "The Hobbit", "author": "Tolkien" }
           ]
         }
       }
@@ -6192,11 +6191,11 @@
   {
     "sites": ["shopping_admin"],
     "task_id": 243,
-    "intent_template_id": 244,
+    "intent_template_id": 812,
     "start_urls": ["__SHOPPING_ADMIN__"],
-    "intent": "Get the email address of the customer who is the most unhappy with Circe fleece",
-    "intent_template": "Get the {{information}} of the customer who is the most unhappy with {{product}}",
-    "instantiation_dict": {"information": "email address", "product": "Circe fleece"},
+    "intent": "Get the nickname on the unique lowest-rated review of Circe Hooded Ice Fleece",
+    "intent_template": "Get the nickname on the unique lowest-rated review of {{product}}",
+    "instantiation_dict": {"product": "Circe Hooded Ice Fleece"},
     "eval": [
       {
         "evaluator": "AgentResponseEvaluator",
@@ -6204,11 +6203,11 @@
         "expected": {
           "task_type": "retrieve",
           "status": "SUCCESS",
-          "retrieved_data": ["hannah.lim@gmail.com"]
+          "retrieved_data": ["Hannah Lim"]
         }
       }
     ],
-    "revision": 2
+    "revision": 3
   },
   {
     "sites": ["shopping_admin"],
