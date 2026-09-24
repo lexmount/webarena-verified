@@ -80,6 +80,31 @@ def test_repeated_endpoint_contracts_match_distinct_request_bodies(wa: WebArenaV
     assert float(_evaluate(wa, tmp_path, 567, entries[1:]).score) == 0.0
 
 
+@pytest.mark.parametrize("task_id", [742, 743, 745, 746])
+def test_project_creation_with_multiple_members_matches_complete_trace(
+    wa: WebArenaVerified, tmp_path: Path, task_id: int
+) -> None:
+    task = wa.get_task(task_id)
+    entries = []
+    for config in task.network_event_evaluator_cfgs:
+        expected = config.expected
+        url = (
+            "http://localhost:8023/api/v4/projects"
+            if expected.url == "__GITLAB__/api/v4/projects"
+            else "http://localhost:8023/api/v4/projects/4242/members"
+        )
+        entries.append(
+            _entry(
+                method=expected.http_method,
+                url=url,
+                post_data=dict(expected.post_data or {}),
+                status=expected.response_status,
+            )
+        )
+
+    assert float(_evaluate(wa, tmp_path, task_id, entries).score) == 1.0
+
+
 @pytest.mark.parametrize(("origin", "expected_score"), [("http://localhost:9999", 1.0), ("http://wrong.test", 0.0)])
 def test_markdown_form_values_derender_embedded_urls(
     wa: WebArenaVerified, tmp_path: Path, origin: str, expected_score: float
@@ -178,11 +203,28 @@ def test_dynamic_contract_binds_one_value_across_url_and_form_key(wa: WebArenaVe
     ]
     assert float(_evaluate(wa, tmp_path, 611, entries).score) == 1.0
 
+    entries.append(
+        _entry(
+            method="POST",
+            url="http://localhost:9999/f/books/4242/-/comment",
+            post_data={"reply_to_submission_4242[comment]": "wrong final comment"},
+            status=302,
+            mime_type="application/x-www-form-urlencoded",
+        )
+    )
+    assert float(_evaluate(wa, tmp_path, 611, entries).score) == 0.0
+
+    entries.pop()
     entries[2]["request"]["postData"]["text"] = urlencode({"reply_to_submission_9999[comment]": "Wonderful journey"})
     assert float(_evaluate(wa, tmp_path, 611, entries).score) == 0.0
 
 
 def test_singleton_array_post_contract_is_an_array_not_an_alternative(wa: WebArenaVerified, tmp_path: Path) -> None:
+    config = wa.get_task(811).network_event_evaluator_cfgs[0]
+    assert config.post_data_schema == {
+        "type": "object",
+        "properties": {"$.issue.assignee_ids": {"type": "array", "items": {"type": "integer"}}},
+    }
     entries = [
         _entry(
             method="PUT",

@@ -320,7 +320,7 @@ class NetworkEventEvaluator(BaseEvaluator[NetworkEventEvaluatorCfg]):
 
             if (
                 not strict
-                and post_data_schema.get("x-inferred-singleton-arrays")
+                and self._contains_array_schema(post_data_schema)
                 and not self._matches_json_schema(post_data_dict, post_data_schema)
             ):
                 # Preserve the mismatched raw value so structural comparison
@@ -775,11 +775,11 @@ class NetworkEventEvaluator(BaseEvaluator[NetworkEventEvaluatorCfg]):
             return super().evaluate(context=context, config=config)
 
         first_result: EvaluatorResult | None = None
-        for candidate, source_event in candidates:
+        for candidate, source_events in candidates:
             candidate_context = context
-            if source_event is not None:
+            if source_events is not None:
                 candidate_context = context.model_copy(
-                    update={"network_trace": context.network_trace.model_copy(update={"events": (source_event,)})}
+                    update={"network_trace": context.network_trace.model_copy(update={"events": source_events})}
                 )
             result = super().evaluate(context=candidate_context, config=candidate)
             first_result = first_result or result
@@ -790,11 +790,13 @@ class NetworkEventEvaluator(BaseEvaluator[NetworkEventEvaluatorCfg]):
 
     def _runtime_configs(
         self, context: TaskEvalContext, config: NetworkEventEvaluatorCfg
-    ) -> list[tuple[NetworkEventEvaluatorCfg, NetworkEvent | None]]:
-        """Bind placeholders and retain the event that supplied each binding."""
+    ) -> list[tuple[NetworkEventEvaluatorCfg, tuple[NetworkEvent, ...] | None]]:
+        """Bind placeholders and group ordered events by resolved binding."""
         expected = config.expected.model_dump(mode="python", exclude_none=False)
         names = _placeholder_names(expected)
-        candidates: list[tuple[NetworkEventEvaluatorCfg, NetworkEvent | None]] = []
+        candidates_by_binding: dict[
+            tuple[tuple[str, str], ...], tuple[NetworkEventEvaluatorCfg, list[NetworkEvent]]
+        ] = {}
 
         if names:
             raw_urls = expected.get("url")
@@ -834,14 +836,19 @@ class NetworkEventEvaluator(BaseEvaluator[NetworkEventEvaluatorCfg]):
                         break
                 if valid and set(bindings) == names:
                     corrected_expected = _substitute_placeholders(expected, bindings)
-                    candidates.append(
-                        (
+                    binding_key = tuple(sorted(bindings.items()))
+                    if binding_key not in candidates_by_binding:
+                        candidates_by_binding[binding_key] = (
                             config.model_copy(
                                 update={"expected": config.expected.model_copy(update=corrected_expected)}
                             ),
-                            event,
+                            [],
                         )
-                    )
+                    candidates_by_binding[binding_key][1].append(event)
+
+            candidates = [
+                (candidate, tuple(source_events)) for candidate, source_events in candidates_by_binding.values()
+            ]
         else:
             candidates = [(config, None)]
 
@@ -865,7 +872,6 @@ class NetworkEventEvaluator(BaseEvaluator[NetworkEventEvaluatorCfg]):
                 }
                 for key in singleton_arrays
             },
-            "x-inferred-singleton-arrays": True,
         }
         return config.model_copy(update={"post_data_schema": schema})
 
@@ -926,3 +932,14 @@ class NetworkEventEvaluator(BaseEvaluator[NetworkEventEvaluatorCfg]):
         else:
             matches = True
         return matches
+
+    @staticmethod
+    def _contains_array_schema(schema: Mapping[str, Any]) -> bool:
+        """Return whether a schema contains an array at any depth."""
+        if schema.get("type") == "array":
+            return True
+        properties = schema.get("properties", {})
+        return isinstance(properties, Mapping) and any(
+            isinstance(property_schema, Mapping) and NetworkEventEvaluator._contains_array_schema(property_schema)
+            for property_schema in properties.values()
+        )
