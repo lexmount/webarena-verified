@@ -219,6 +219,30 @@ def test_dynamic_contract_binds_one_value_across_url_and_form_key(wa: WebArenaVe
     assert float(_evaluate(wa, tmp_path, 611, entries).score) == 0.0
 
 
+def test_dynamic_post_binding_does_not_split_last_event_stream(wa: WebArenaVerified, tmp_path: Path) -> None:
+    entries = [
+        _entry(
+            method="POST",
+            url="http://localhost:9999/submit/MachineLearning",
+            post_data={
+                "submission[title]": "what is the SOTA web navigation agent repo",
+                "submission[forum]": "10037",
+            },
+            status=302,
+            mime_type="application/x-www-form-urlencoded",
+        ),
+        _entry(
+            method="POST",
+            url="http://localhost:9999/submit/MachineLearning",
+            post_data={"submission[title]": "wrong final title", "submission[forum]": "99999"},
+            status=302,
+            mime_type="application/x-www-form-urlencoded",
+        ),
+    ]
+
+    assert float(_evaluate(wa, tmp_path, 604, entries).score) == 0.0
+
+
 def test_singleton_array_post_contract_is_an_array_not_an_alternative(wa: WebArenaVerified, tmp_path: Path) -> None:
     config = wa.get_task(811).network_event_evaluator_cfgs[0]
     assert config.post_data_schema == {

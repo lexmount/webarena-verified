@@ -795,8 +795,9 @@ class NetworkEventEvaluator(BaseEvaluator[NetworkEventEvaluatorCfg]):
         expected = config.expected.model_dump(mode="python", exclude_none=False)
         names = _placeholder_names(expected)
         candidates_by_binding: dict[
-            tuple[tuple[str, str], ...], tuple[NetworkEventEvaluatorCfg, list[NetworkEvent]]
+            tuple[tuple[str, str], ...], tuple[NetworkEventEvaluatorCfg, tuple[tuple[str, str], ...]]
         ] = {}
+        events_by_stream: dict[tuple[tuple[str, str], ...], list[NetworkEvent]] = {}
 
         if names:
             raw_urls = expected.get("url")
@@ -807,34 +808,20 @@ class NetworkEventEvaluator(BaseEvaluator[NetworkEventEvaluatorCfg]):
                 if expected_method and event.http_method.lower() != expected_method.lower():
                     continue
 
-                bindings: dict[str, str] = {}
-                dynamic_urls = [item for item in url_templates if isinstance(item, str) and _PLACEHOLDER.search(item)]
-                if dynamic_urls:
-                    actual_url = context.config.derender_url(event.url, sites=context.task.sites, strict=False)
-                    if not any(_template_match(item, actual_url, bindings) for item in dynamic_urls):
-                        continue
+                stream = self._resolve_event_stream(
+                    event=event,
+                    context=context,
+                    config=config,
+                    raw_urls=raw_urls,
+                    url_templates=url_templates,
+                )
+                if stream is None:
+                    continue
+                stream_key, bindings = stream
+                events_by_stream.setdefault(stream_key, []).append(event)
 
-                actual_post = dict(event.post_data or {})
-                valid = True
-                for key_template, value_template in post_templates.items():
-                    actual_value = actual_post.get(key_template)
-                    if isinstance(key_template, str) and _PLACEHOLDER.search(key_template):
-                        matched_key = next(
-                            (key for key in actual_post if _template_match(key_template, key, bindings.copy())),
-                            None,
-                        )
-                        if matched_key is None or not _template_match(key_template, matched_key, bindings):
-                            valid = False
-                            break
-                        actual_value = actual_post[matched_key]
-                    if (
-                        isinstance(value_template, str)
-                        and _PLACEHOLDER.search(value_template)
-                        and not _template_match(value_template, actual_value, bindings)
-                    ):
-                        valid = False
-                        break
-                if valid and set(bindings) == names:
+                bindings = self._bind_post_placeholders(post_templates, event.post_data or {}, bindings)
+                if bindings is not None and set(bindings) == names:
                     corrected_expected = _substitute_placeholders(expected, bindings)
                     binding_key = tuple(sorted(bindings.items()))
                     if binding_key not in candidates_by_binding:
@@ -842,17 +829,72 @@ class NetworkEventEvaluator(BaseEvaluator[NetworkEventEvaluatorCfg]):
                             config.model_copy(
                                 update={"expected": config.expected.model_copy(update=corrected_expected)}
                             ),
-                            [],
+                            stream_key,
                         )
-                    candidates_by_binding[binding_key][1].append(event)
 
             candidates = [
-                (candidate, tuple(source_events)) for candidate, source_events in candidates_by_binding.values()
+                (candidate, tuple(events_by_stream[stream_key]))
+                for candidate, stream_key in candidates_by_binding.values()
             ]
         else:
             candidates = [(config, None)]
 
         return [(self._with_inferred_post_schema(candidate), source_event) for candidate, source_event in candidates]
+
+    def _resolve_event_stream(
+        self,
+        *,
+        event: NetworkEvent,
+        context: TaskEvalContext,
+        config: NetworkEventEvaluatorCfg,
+        raw_urls: Any,
+        url_templates: list[Any],
+    ) -> tuple[tuple[tuple[str, str], ...], dict[str, str]] | None:
+        """Resolve URL bindings and apply the evaluator's normal prefilter."""
+        bindings: dict[str, str] = {}
+        dynamic_urls = [item for item in url_templates if isinstance(item, str) and _PLACEHOLDER.search(item)]
+        resolved_urls = raw_urls
+        if dynamic_urls:
+            actual_url = context.config.derender_url(event.url, sites=context.task.sites, strict=False)
+            for item in dynamic_urls:
+                candidate_bindings = bindings.copy()
+                if _template_match(item, actual_url, candidate_bindings):
+                    bindings = candidate_bindings
+                    resolved_urls = _substitute_placeholders(item, bindings)
+                    break
+            else:
+                return None
+
+        filter_config = config.model_copy(
+            update={"expected": config.expected.model_copy(update={"url": resolved_urls})}
+        )
+        if not self._filter_events_by_criteria((event,), context, filter_config):
+            return None
+        return tuple(sorted(bindings.items())), bindings
+
+    @staticmethod
+    def _bind_post_placeholders(
+        post_templates: Mapping[str, Any], actual_post: Mapping[str, Any], initial: Mapping[str, str]
+    ) -> dict[str, str] | None:
+        """Bind dynamic POST keys and values without defining an event stream."""
+        bindings = dict(initial)
+        for key_template, value_template in post_templates.items():
+            actual_value = actual_post.get(key_template)
+            if _PLACEHOLDER.search(key_template):
+                matched_key = next(
+                    (key for key in actual_post if _template_match(key_template, key, bindings.copy())),
+                    None,
+                )
+                if matched_key is None or not _template_match(key_template, matched_key, bindings):
+                    return None
+                actual_value = actual_post[matched_key]
+            if (
+                isinstance(value_template, str)
+                and _PLACEHOLDER.search(value_template)
+                and not _template_match(value_template, actual_value, bindings)
+            ):
+                return None
+        return bindings
 
     @staticmethod
     def _with_inferred_post_schema(config: NetworkEventEvaluatorCfg) -> NetworkEventEvaluatorCfg:
