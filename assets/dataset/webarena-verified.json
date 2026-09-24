@@ -15546,6 +15546,7 @@
       },
       {
         "evaluator": "NetworkEventEvaluator",
+        "last_event_only": false,
         "expected": {
           "url": "__GITLAB__/api/v4/projects/184/members",
           "http_method": "POST",
@@ -15555,6 +15556,7 @@
       },
       {
         "evaluator": "NetworkEventEvaluator",
+        "last_event_only": false,
         "expected": {
           "url": "__GITLAB__/api/v4/projects/184/members",
           "http_method": "POST",
@@ -15563,7 +15565,7 @@
         }
       }
     ],
-    "revision": 2
+    "revision": 3
   },
   {
     "sites": ["gitlab"],
@@ -15581,6 +15583,7 @@
       },
       {
         "evaluator": "NetworkEventEvaluator",
+        "last_event_only": false,
         "expected": {
           "url": "__GITLAB__/api/v4/projects/174/members",
           "http_method": "POST",
@@ -15590,6 +15593,7 @@
       },
       {
         "evaluator": "NetworkEventEvaluator",
+        "last_event_only": false,
         "expected": {
           "url": "__GITLAB__/api/v4/projects/174/members",
           "http_method": "POST",
@@ -15598,7 +15602,7 @@
         }
       }
     ],
-    "revision": 2
+    "revision": 3
   },
   {
     "sites": ["gitlab"],
@@ -15619,6 +15623,7 @@
       },
       {
         "evaluator": "NetworkEventEvaluator",
+        "last_event_only": false,
         "expected": {
           "url": "__GITLAB__/api/v4/projects/185/members",
           "http_method": "POST",
@@ -15628,6 +15633,7 @@
       },
       {
         "evaluator": "NetworkEventEvaluator",
+        "last_event_only": false,
         "expected": {
           "url": "__GITLAB__/api/v4/projects/185/members",
           "http_method": "POST",
@@ -15636,7 +15642,7 @@
         }
       }
     ],
-    "revision": 2
+    "revision": 3
   },
   {
     "sites": ["gitlab"],
@@ -15657,6 +15663,7 @@
       },
       {
         "evaluator": "NetworkEventEvaluator",
+        "last_event_only": false,
         "expected": {
           "url": "__GITLAB__/api/v4/projects/190/members",
           "http_method": "POST",
@@ -15666,6 +15673,7 @@
       },
       {
         "evaluator": "NetworkEventEvaluator",
+        "last_event_only": false,
         "expected": {
           "url": "__GITLAB__/api/v4/projects/190/members",
           "http_method": "POST",
@@ -15675,6 +15683,7 @@
       },
       {
         "evaluator": "NetworkEventEvaluator",
+        "last_event_only": false,
         "expected": {
           "url": "__GITLAB__/api/v4/projects/190/members",
           "http_method": "POST",
@@ -15684,6 +15693,7 @@
       },
       {
         "evaluator": "NetworkEventEvaluator",
+        "last_event_only": false,
         "expected": {
           "url": "__GITLAB__/api/v4/projects/190/members",
           "http_method": "POST",
@@ -15692,7 +15702,7 @@
         }
       }
     ],
-    "revision": 2
+    "revision": 3
   },
   {
     "sites": ["shopping"],

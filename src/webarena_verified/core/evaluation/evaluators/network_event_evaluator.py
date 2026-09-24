@@ -128,8 +128,7 @@ class NetworkEventEvaluator(BaseEvaluator[NetworkEventEvaluatorCfg]):
             return []
 
         # Step 2: Select event(s)
-        use_last_event_only = config.last_event_only and not self._has_repeated_event_contract(context, config)
-        selected_events = [matching_events[-1]] if use_last_event_only else matching_events
+        selected_events = [matching_events[-1]] if config.last_event_only else matching_events
 
         # Step 3: Extract relevant data from events
         extracted_data = []
@@ -137,19 +136,7 @@ class NetworkEventEvaluator(BaseEvaluator[NetworkEventEvaluatorCfg]):
             event_data = self._extract_event_data(event, config, context)
             extracted_data.append(event_data)
 
-        return [extracted_data[0]] if use_last_event_only else extracted_data
-
-    @staticmethod
-    def _has_repeated_event_contract(context: TaskEvalContext, config: NetworkEventEvaluatorCfg) -> bool:
-        """Return whether sibling assertions target the same request stream."""
-        siblings = [
-            item
-            for item in context.task.eval
-            if isinstance(item, NetworkEventEvaluatorCfg)
-            and item.expected.url == config.expected.url
-            and item.expected.http_method == config.expected.http_method
-        ]
-        return len(siblings) > 1
+        return [extracted_data[0]] if config.last_event_only else extracted_data
 
     def _get_expected_value(self, config: NetworkEventEvaluatorCfg) -> NetworkEventSpec:
         """Get expected value from config.
@@ -330,6 +317,16 @@ class NetworkEventEvaluator(BaseEvaluator[NetworkEventEvaluatorCfg]):
         # Normalize post_data values with schema (for type-aware comparison)
         if post_data_dict:
             post_data_schema = config.post_data_schema or {}
+
+            if (
+                not strict
+                and post_data_schema.get("x-inferred-singleton-arrays")
+                and not self._matches_json_schema(post_data_dict, post_data_schema)
+            ):
+                # Preserve the mismatched raw value so structural comparison
+                # rejects it instead of coercing (for example, "2330" to 2330).
+                normalized["post_data"] = post_data_dict
+                return
 
             _derender_url_fct = partial(context.config.derender_url, sites=context.task.sites, strict=strict)
             normalized["post_data"] = self.value_normalizer.normalize(
@@ -778,8 +775,13 @@ class NetworkEventEvaluator(BaseEvaluator[NetworkEventEvaluatorCfg]):
             return super().evaluate(context=context, config=config)
 
         first_result: EvaluatorResult | None = None
-        for candidate in candidates:
-            result = super().evaluate(context=context, config=candidate)
+        for candidate, source_event in candidates:
+            candidate_context = context
+            if source_event is not None:
+                candidate_context = context.model_copy(
+                    update={"network_trace": context.network_trace.model_copy(update={"events": (source_event,)})}
+                )
+            result = super().evaluate(context=candidate_context, config=candidate)
             first_result = first_result or result
             if result.score == 1:
                 return result
@@ -788,11 +790,11 @@ class NetworkEventEvaluator(BaseEvaluator[NetworkEventEvaluatorCfg]):
 
     def _runtime_configs(
         self, context: TaskEvalContext, config: NetworkEventEvaluatorCfg
-    ) -> list[NetworkEventEvaluatorCfg]:
-        """Bind placeholders from one event, then retain normal evaluation."""
+    ) -> list[tuple[NetworkEventEvaluatorCfg, NetworkEvent | None]]:
+        """Bind placeholders and retain the event that supplied each binding."""
         expected = config.expected.model_dump(mode="python", exclude_none=False)
         names = _placeholder_names(expected)
-        candidates: list[NetworkEventEvaluatorCfg] = []
+        candidates: list[tuple[NetworkEventEvaluatorCfg, NetworkEvent | None]] = []
 
         if names:
             raw_urls = expected.get("url")
@@ -833,12 +835,17 @@ class NetworkEventEvaluator(BaseEvaluator[NetworkEventEvaluatorCfg]):
                 if valid and set(bindings) == names:
                     corrected_expected = _substitute_placeholders(expected, bindings)
                     candidates.append(
-                        config.model_copy(update={"expected": config.expected.model_copy(update=corrected_expected)})
+                        (
+                            config.model_copy(
+                                update={"expected": config.expected.model_copy(update=corrected_expected)}
+                            ),
+                            event,
+                        )
                     )
         else:
-            candidates = [config]
+            candidates = [(config, None)]
 
-        return [self._with_inferred_post_schema(candidate) for candidate in candidates]
+        return [(self._with_inferred_post_schema(candidate), source_event) for candidate, source_event in candidates]
 
     @staticmethod
     def _with_inferred_post_schema(config: NetworkEventEvaluatorCfg) -> NetworkEventEvaluatorCfg:
@@ -851,6 +858,71 @@ class NetworkEventEvaluator(BaseEvaluator[NetworkEventEvaluatorCfg]):
             return config
         schema = {
             "type": "object",
-            "properties": {key: {"type": "array", "items": {"type": "string"}} for key in singleton_arrays},
+            "properties": {
+                key: {
+                    "type": "array",
+                    "items": NetworkEventEvaluator._schema_for_json_value(post_data[key][0]),
+                }
+                for key in singleton_arrays
+            },
+            "x-inferred-singleton-arrays": True,
         }
         return config.model_copy(update={"post_data_schema": schema})
+
+    @staticmethod
+    def _schema_for_json_value(value: Any) -> dict[str, Any]:
+        """Infer a JSON schema without coercing distinct scalar types."""
+        if value is None:
+            schema = {"type": "null"}
+        elif isinstance(value, bool):
+            schema = {"type": "boolean"}
+        elif isinstance(value, int):
+            schema = {"type": "integer"}
+        elif isinstance(value, float):
+            schema = {"type": "number"}
+        elif isinstance(value, str):
+            schema = {"type": "string"}
+        elif isinstance(value, Mapping):
+            schema = {
+                "type": "object",
+                "properties": {key: NetworkEventEvaluator._schema_for_json_value(item) for key, item in value.items()},
+            }
+        elif isinstance(value, (list, tuple)):
+            schema = {
+                "type": "array",
+                "items": NetworkEventEvaluator._schema_for_json_value(value[0]) if value else {},
+            }
+        else:
+            raise TypeError(f"Cannot infer a POST data schema for {type(value).__name__}")
+        return schema
+
+    @staticmethod
+    def _matches_json_schema(value: Any, schema: Mapping[str, Any]) -> bool:
+        """Check the JSON types used by inferred singleton-array schemas."""
+        schema_type = schema.get("type")
+        if schema_type == "null":
+            matches = value is None
+        elif schema_type == "boolean":
+            matches = isinstance(value, bool)
+        elif schema_type == "integer":
+            matches = isinstance(value, int) and not isinstance(value, bool)
+        elif schema_type == "number":
+            matches = isinstance(value, (int, float)) and not isinstance(value, bool)
+        elif schema_type == "string":
+            matches = isinstance(value, str)
+        elif schema_type == "array":
+            item_schema = schema.get("items", {})
+            matches = isinstance(value, (list, tuple)) and all(
+                NetworkEventEvaluator._matches_json_schema(item, item_schema) for item in value
+            )
+        elif schema_type == "object":
+            if isinstance(value, Mapping):
+                matches = all(
+                    key in value and NetworkEventEvaluator._matches_json_schema(value[key], property_schema)
+                    for key, property_schema in schema.get("properties", {}).items()
+                )
+            else:
+                matches = False
+        else:
+            matches = True
+        return matches

@@ -130,12 +130,41 @@ def test_plain_form_values_derender_embedded_urls(
     assert float(_evaluate(wa, tmp_path, 684, entries).score) == expected_score
 
 
+def test_last_event_only_rejects_a_later_wrong_request_to_the_same_endpoint(
+    wa: WebArenaVerified, tmp_path: Path
+) -> None:
+    expected = wa.get_task(684).network_event_evaluator_cfgs[0].expected
+    assert expected.post_data is not None
+    correct = dict(expected.post_data)
+    correct["submission[url]"] = correct["submission[url]"].replace("__GITLAB__", "http://localhost:8023")
+    wrong = {**correct, "submission[title]": "wrong title"}
+    entries = [
+        _entry(
+            method="POST",
+            url="http://localhost:9999/submit/LifeProTips",
+            post_data=post_data,
+            status=302,
+            mime_type="application/x-www-form-urlencoded",
+        )
+        for post_data in (correct, wrong)
+    ]
+
+    assert float(_evaluate(wa, tmp_path, 684, entries).score) == 0.0
+
+
 def test_dynamic_contract_binds_one_value_across_url_and_form_key(wa: WebArenaVerified, tmp_path: Path) -> None:
     entries = [
         _entry(
             method="POST",
             url="http://localhost:9999/submit/books",
             post_data={"submission[title]": "Harry Potter", "submission[forum]": "10037"},
+            status=302,
+            mime_type="application/x-www-form-urlencoded",
+        ),
+        _entry(
+            method="POST",
+            url="http://localhost:9999/f/books/1111/-/comment",
+            post_data={"reply_to_submission_2222[comment]": "Wonderful journey"},
             status=302,
             mime_type="application/x-www-form-urlencoded",
         ),
@@ -149,7 +178,7 @@ def test_dynamic_contract_binds_one_value_across_url_and_form_key(wa: WebArenaVe
     ]
     assert float(_evaluate(wa, tmp_path, 611, entries).score) == 1.0
 
-    entries[1]["request"]["postData"]["text"] = urlencode({"reply_to_submission_9999[comment]": "Wonderful journey"})
+    entries[2]["request"]["postData"]["text"] = urlencode({"reply_to_submission_9999[comment]": "Wonderful journey"})
     assert float(_evaluate(wa, tmp_path, 611, entries).score) == 0.0
 
 
@@ -163,3 +192,6 @@ def test_singleton_array_post_contract_is_an_array_not_an_alternative(wa: WebAre
         )
     ]
     assert float(_evaluate(wa, tmp_path, 811, entries).score) == 1.0
+
+    entries[0]["request"]["postData"]["text"] = json.dumps({"issue": {"assignee_ids": ["2330"]}})
+    assert float(_evaluate(wa, tmp_path, 811, entries).score) == 0.0

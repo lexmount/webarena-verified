@@ -39,3 +39,13 @@ def test_indexed_form_fields_are_not_encoded_as_singleton_alternatives(
         assert post_data["customer_group_ids[0]"] == "1"
         assert "website_ids" not in post_data
         assert "customer_group_ids" not in post_data
+
+
+def test_repeated_member_requests_explicitly_match_any_event(
+    dataset_by_task_id: dict[int, dict[str, Any]],
+) -> None:
+    for task_id in (567, 568, 569, 570):
+        task = dataset_by_task_id[task_id]
+        evaluators = [item for item in task["eval"] if item["evaluator"] == "NetworkEventEvaluator"]
+        assert task["revision"] == 3
+        assert all(item["last_event_only"] is False for item in evaluators)
