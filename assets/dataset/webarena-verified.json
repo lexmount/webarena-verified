@@ -6722,10 +6722,10 @@
       {
         "evaluator": "NetworkEventEvaluator",
         "ignored_query_params_patterns": [".*"],
-        "expected": {"url": "^.*/route/v1/.*/-68.2177005,44.3494709;-71.0579762,42.3603713.*$"}
+        "expected": {"url": "^.*/route/v1/.*/-71.0579762,42.3603713;-68.2177005,44.3494709.*$"}
       }
     ],
-    "revision": 4
+    "revision": 5
   },
   {
     "sites": ["wikipedia", "map"],
@@ -6762,10 +6762,10 @@
       {
         "evaluator": "NetworkEventEvaluator",
         "ignored_query_params_patterns": [".*"],
-        "expected": {"url": "^.*/route/v1/.*/-68.2177005,44.3494709;-70.2545299,43.6599147.*$"}
+        "expected": {"url": "^.*/route/v1/.*/-70.2545299,43.6599147;-68.2177005,44.3494709.*$"}
       }
     ],
-    "revision": 4
+    "revision": 5
   },
   {
     "sites": ["wikipedia", "map"],
@@ -6803,12 +6803,12 @@
         "evaluator": "NetworkEventEvaluator",
         "ignored_query_params_patterns": [".*"],
         "expected": {
-          "url": "^.*/route/.*/-68.2177005,44.3494709;-68.767507,44.8030715.*$",
+          "url": "^.*/route/.*/-68.767507,44.8030715;-68.2177005,44.3494709.*$",
           "headers": {"Cookie": "^(?!.*_osm_directions_engine=fossgis_osrm_(?:bicycle|foot)).*$"}
         }
       }
     ],
-    "revision": 4
+    "revision": 5
   },
   {
     "sites": ["wikipedia", "map"],
@@ -6846,12 +6846,12 @@
         "evaluator": "NetworkEventEvaluator",
         "ignored_query_params_patterns": [".*"],
         "expected": {
-          "url": "^.*/route/v1/.*/-68.2177005,44.3494709;-68.8315387,44.0478975.*$",
+          "url": "^.*/route/v1/.*/-68.8315387,44.0478975;-68.2177005,44.3494709.*$",
           "headers": {"Cookie": "^.*_osm_directions_engine=fossgis_osrm_bicycle.*$"}
         }
       }
     ],
-    "revision": 4
+    "revision": 5
   },
   {
     "sites": ["shopping"],
@@ -22244,12 +22244,12 @@
         "navigation_only": false,
         "ignored_query_params_patterns": [".*"],
         "expected": {
-          "url": "^.*/route/v1/.*/-1.4869496,55.0252998;-71.060511,42.3554334.*$",
+          "url": "^.*/route/v1/.*/-71.060511,42.3554334;-74.0060152,40.7127281.*$",
           "headers": {"Cookie": "^(?!.*_osm_directions_engine=fossgis_osrm_(?:bicycle|foot)).*$"}
         }
       }
     ],
-    "revision": 3
+    "revision": 4
   },
   {
     "sites": ["map", "shopping_admin"],
@@ -22274,12 +22274,12 @@
         "navigation_only": false,
         "ignored_query_params_patterns": [".*"],
         "expected": {
-          "url": "^.*/route/v1/.*/-74.4041622,40.0757384;-75.4716115,40.6022552.*$",
+          "url": "^.*/route/v1/.*/-75.4716115,40.6022552;-74.4041622,40.0757384.*$",
           "headers": {"Cookie": "^(?!.*_osm_directions_engine=fossgis_osrm_(?:bicycle|foot)).*$"}
         }
       }
     ],
-    "revision": 3
+    "revision": 4
   },
   {
     "sites": ["map"],

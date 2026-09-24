@@ -17,6 +17,7 @@ def _entry(
     post_data: dict[str, Any],
     status: int,
     mime_type: str = "application/json",
+    request_headers: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     body = json.dumps(post_data) if mime_type == "application/json" else urlencode(post_data, doseq=True)
     return {
@@ -25,7 +26,7 @@ def _entry(
         "request": {
             "method": method,
             "url": url,
-            "headers": [],
+            "headers": [{"name": name, "value": value} for name, value in (request_headers or {}).items()],
             "cookies": [],
             "queryString": [],
             "postData": {"mimeType": mime_type, "text": body},
@@ -42,7 +43,13 @@ def _entry(
     }
 
 
-def _evaluate(wa: WebArenaVerified, tmp_path: Path, task_id: int, entries: list[dict[str, Any]]):
+def _evaluate(
+    wa: WebArenaVerified,
+    tmp_path: Path,
+    task_id: int,
+    entries: list[dict[str, Any]],
+    agent_response: dict[str, Any] | None = None,
+):
     trace = tmp_path / f"task-{task_id}.har"
     trace.write_text(
         json.dumps(
@@ -57,7 +64,7 @@ def _evaluate(wa: WebArenaVerified, tmp_path: Path, task_id: int, entries: list[
     )
     return wa.evaluate_task(
         task_id=task_id,
-        agent_response={"task_type": "MUTATE", "status": "SUCCESS", "retrieved_data": None},
+        agent_response=agent_response or {"task_type": "MUTATE", "status": "SUCCESS", "retrieved_data": None},
         network_trace=trace,
     )
 
@@ -106,6 +113,80 @@ def test_hollister_mass_status_uses_the_native_filtered_grid_request(wa: WebAren
     assert float(_evaluate(wa, tmp_path, 423, [correct]).score) == 1.0
     assert float(_evaluate(wa, tmp_path, 423, [unrelated_upstream_contract]).score) == 0.0
     assert float(_evaluate(wa, tmp_path, 423, [correct, later_wrong_mass_status]).score) == 0.0
+
+
+@pytest.mark.parametrize(
+    ("task_id", "origin", "destination", "cookie"),
+    [
+        (265, "-71.0579762,42.3603713", "-68.2177005,44.3494709", ""),
+        (266, "-70.2545299,43.6599147", "-68.2177005,44.3494709", ""),
+        (267, "-68.767507,44.8030715", "-68.2177005,44.3494709", ""),
+        (
+            268,
+            "-68.8315387,44.0478975",
+            "-68.2177005,44.3494709",
+            "_osm_directions_engine=fossgis_osrm_bicycle",
+        ),
+        (759, "-71.060511,42.3554334", "-74.0060152,40.7127281", ""),
+        (760, "-75.4716115,40.6022552", "-74.4041622,40.0757384", ""),
+    ],
+)
+def test_route_contracts_require_intent_direction(
+    wa: WebArenaVerified,
+    tmp_path: Path,
+    task_id: int,
+    origin: str,
+    destination: str,
+    cookie: str,
+) -> None:
+    expected_agent_response = wa.get_task(task_id).expected_agent_response.model_dump(mode="json")
+
+    def route_entry(first: str, second: str) -> dict[str, Any]:
+        return _entry(
+            method="GET",
+            url=f"http://localhost:3000/osrm/routed/route/v1/driving/{first};{second}?steps=true",
+            post_data={},
+            status=200,
+            request_headers={"Cookie": cookie},
+        )
+
+    def route_trace(first: str, second: str) -> list[dict[str, Any]]:
+        route = route_entry(first, second)
+        if not wa.get_task(task_id).is_navigate_task:
+            return [route]
+        navigation = _entry(
+            method="GET",
+            url="http://localhost:3000/directions",
+            post_data={},
+            status=200,
+            request_headers={"Accept": "text/html", "Sec-Fetch-Dest": "document"},
+        )
+        return [navigation, route]
+
+    assert (
+        float(
+            _evaluate(
+                wa,
+                tmp_path,
+                task_id,
+                route_trace(origin, destination),
+                expected_agent_response,
+            ).score
+        )
+        == 1.0
+    )
+    assert (
+        float(
+            _evaluate(
+                wa,
+                tmp_path,
+                task_id,
+                route_trace(destination, origin),
+                expected_agent_response,
+            ).score
+        )
+        == 0.0
+    )
 
 
 @pytest.mark.parametrize("task_id", [742, 743, 745, 746])
