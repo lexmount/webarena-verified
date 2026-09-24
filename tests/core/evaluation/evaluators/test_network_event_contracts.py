@@ -80,6 +80,34 @@ def test_repeated_endpoint_contracts_match_distinct_request_bodies(wa: WebArenaV
     assert float(_evaluate(wa, tmp_path, 567, entries[1:]).score) == 0.0
 
 
+def test_hollister_mass_status_uses_the_native_filtered_grid_request(wa: WebArenaVerified, tmp_path: Path) -> None:
+    correct = _entry(
+        method="POST",
+        url="http://localhost:7780/admin/catalog/product/massStatus/status/1/",
+        post_data={"excluded": "false", "search": "hollister", "namespace": "product_listing"},
+        status=302,
+        mime_type="application/x-www-form-urlencoded",
+    )
+    unrelated_upstream_contract = _entry(
+        method="GET",
+        url="http://localhost:7780/admin/catalog/product/save/id/126/type/configurable/store/0/set/4/back/edit",
+        post_data={"report_type": "created_at_order", "from": "02/1/2023", "to": "02/28/2023"},
+        status=302,
+        mime_type="application/x-www-form-urlencoded",
+    )
+    later_wrong_mass_status = _entry(
+        method="POST",
+        url="http://localhost:7780/admin/catalog/product/massStatus/status/1/",
+        post_data={"excluded": "false", "search": "nike", "namespace": "product_listing"},
+        status=302,
+        mime_type="application/x-www-form-urlencoded",
+    )
+
+    assert float(_evaluate(wa, tmp_path, 423, [correct]).score) == 1.0
+    assert float(_evaluate(wa, tmp_path, 423, [unrelated_upstream_contract]).score) == 0.0
+    assert float(_evaluate(wa, tmp_path, 423, [correct, later_wrong_mass_status]).score) == 0.0
+
+
 @pytest.mark.parametrize("task_id", [742, 743, 745, 746])
 def test_project_creation_with_multiple_members_matches_complete_trace(
     wa: WebArenaVerified, tmp_path: Path, task_id: int
