@@ -5,6 +5,7 @@ and response status against expected criteria using four-step architecture.
 """
 
 import re
+from collections.abc import Mapping
 from functools import partial
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, cast
@@ -13,7 +14,7 @@ from urllib.parse import parse_qs, urlsplit
 from webarena_verified.core.evaluation.data_types import URL
 from webarena_verified.core.utils import logger
 from webarena_verified.core.utils.jsonpath_utils import extract_jsonpath_value, is_jsonpath_key
-from webarena_verified.types.eval import EvalAssertion, EvalStatus, TaskEvalContext
+from webarena_verified.types.eval import EvalAssertion, EvalStatus, EvaluatorResult, TaskEvalContext
 from webarena_verified.types.task import NetworkEventEvaluatorCfg, NetworkEventSpec
 from webarena_verified.types.tracing import NetworkEvent
 
@@ -21,6 +22,67 @@ from .base import BaseEvaluator
 
 if TYPE_CHECKING:
     from webarena_verified.types.common import SerializableMappingProxyType
+
+
+_PLACEHOLDER = re.compile(r"\{\{([a-zA-Z_][a-zA-Z0-9_]*)\}\}")
+
+
+def _template_match(template: str, actual: Any, bindings: dict[str, str]) -> bool:
+    """Match a dynamic evaluator template and consistently bind its names."""
+    if not isinstance(actual, (str, int, float)):
+        return False
+    cursor = 0
+    parts = ["^"]
+    local_groups: set[str] = set()
+    for match in _PLACEHOLDER.finditer(template):
+        parts.append(re.escape(template[cursor : match.start()]))
+        name = match.group(1)
+        if name in bindings:
+            parts.append(re.escape(bindings[name]))
+        elif name in local_groups:
+            parts.append(f"(?P={name})")
+        else:
+            parts.append(f"(?P<{name}>[^/?#&]+)")
+            local_groups.add(name)
+        cursor = match.end()
+    parts.extend((re.escape(template[cursor:]), "$"))
+    matched = re.fullmatch("".join(parts), str(actual))
+    if matched is None:
+        return False
+    bindings.update(matched.groupdict())
+    return True
+
+
+def _placeholder_names(value: Any) -> set[str]:
+    if isinstance(value, str):
+        return set(_PLACEHOLDER.findall(value))
+    if isinstance(value, Mapping):
+        names: set[str] = set()
+        for key, item in value.items():
+            names.update(_placeholder_names(key))
+            names.update(_placeholder_names(item))
+        return names
+    if isinstance(value, (list, tuple)):
+        names = set()
+        for item in value:
+            names.update(_placeholder_names(item))
+        return names
+    return set()
+
+
+def _substitute_placeholders(value: Any, bindings: Mapping[str, str]) -> Any:
+    if isinstance(value, str):
+        return _PLACEHOLDER.sub(lambda match: bindings[match.group(1)], value)
+    if isinstance(value, list):
+        return [_substitute_placeholders(item, bindings) for item in value]
+    if isinstance(value, tuple):
+        return tuple(_substitute_placeholders(item, bindings) for item in value)
+    if isinstance(value, Mapping):
+        return {
+            _substitute_placeholders(key, bindings): _substitute_placeholders(item, bindings)
+            for key, item in value.items()
+        }
+    return value
 
 
 class NetworkEventEvaluator(BaseEvaluator[NetworkEventEvaluatorCfg]):
@@ -66,7 +128,8 @@ class NetworkEventEvaluator(BaseEvaluator[NetworkEventEvaluatorCfg]):
             return []
 
         # Step 2: Select event(s)
-        selected_events = [matching_events[-1]] if config.last_event_only else matching_events
+        use_last_event_only = config.last_event_only and not self._has_repeated_event_contract(context, config)
+        selected_events = [matching_events[-1]] if use_last_event_only else matching_events
 
         # Step 3: Extract relevant data from events
         extracted_data = []
@@ -74,7 +137,19 @@ class NetworkEventEvaluator(BaseEvaluator[NetworkEventEvaluatorCfg]):
             event_data = self._extract_event_data(event, config, context)
             extracted_data.append(event_data)
 
-        return [extracted_data[0]] if config.last_event_only else extracted_data
+        return [extracted_data[0]] if use_last_event_only else extracted_data
+
+    @staticmethod
+    def _has_repeated_event_contract(context: TaskEvalContext, config: NetworkEventEvaluatorCfg) -> bool:
+        """Return whether sibling assertions target the same request stream."""
+        siblings = [
+            item
+            for item in context.task.eval
+            if isinstance(item, NetworkEventEvaluatorCfg)
+            and item.expected.url == config.expected.url
+            and item.expected.http_method == config.expected.http_method
+        ]
+        return len(siblings) > 1
 
     def _get_expected_value(self, config: NetworkEventEvaluatorCfg) -> NetworkEventSpec:
         """Get expected value from config.
@@ -695,3 +770,87 @@ class NetworkEventEvaluator(BaseEvaluator[NetworkEventEvaluatorCfg]):
                     continue
 
         return False
+
+    def evaluate(self, *, context: TaskEvalContext, config: NetworkEventEvaluatorCfg) -> EvaluatorResult:
+        """Evaluate each runtime-bound form of a dynamic network contract."""
+        candidates = self._runtime_configs(context, config)
+        if not candidates:
+            return super().evaluate(context=context, config=config)
+
+        first_result: EvaluatorResult | None = None
+        for candidate in candidates:
+            result = super().evaluate(context=context, config=candidate)
+            first_result = first_result or result
+            if result.score == 1:
+                return result
+        assert first_result is not None
+        return first_result
+
+    def _runtime_configs(
+        self, context: TaskEvalContext, config: NetworkEventEvaluatorCfg
+    ) -> list[NetworkEventEvaluatorCfg]:
+        """Bind placeholders from one event, then retain normal evaluation."""
+        expected = config.expected.model_dump(mode="python", exclude_none=False)
+        names = _placeholder_names(expected)
+        candidates: list[NetworkEventEvaluatorCfg] = []
+
+        if names:
+            raw_urls = expected.get("url")
+            url_templates = list(raw_urls) if isinstance(raw_urls, (list, tuple)) else [raw_urls]
+            post_templates = expected.get("post_data") or {}
+            for event in context.network_trace.evaluation_events:
+                expected_method = expected.get("http_method")
+                if expected_method and event.http_method.lower() != expected_method.lower():
+                    continue
+
+                bindings: dict[str, str] = {}
+                dynamic_urls = [item for item in url_templates if isinstance(item, str) and _PLACEHOLDER.search(item)]
+                if dynamic_urls:
+                    actual_url = context.config.derender_url(event.url, sites=context.task.sites, strict=False)
+                    if not any(_template_match(item, actual_url, bindings) for item in dynamic_urls):
+                        continue
+
+                actual_post = dict(event.post_data or {})
+                valid = True
+                for key_template, value_template in post_templates.items():
+                    actual_value = actual_post.get(key_template)
+                    if isinstance(key_template, str) and _PLACEHOLDER.search(key_template):
+                        matched_key = next(
+                            (key for key in actual_post if _template_match(key_template, key, bindings.copy())),
+                            None,
+                        )
+                        if matched_key is None or not _template_match(key_template, matched_key, bindings):
+                            valid = False
+                            break
+                        actual_value = actual_post[matched_key]
+                    if (
+                        isinstance(value_template, str)
+                        and _PLACEHOLDER.search(value_template)
+                        and not _template_match(value_template, actual_value, bindings)
+                    ):
+                        valid = False
+                        break
+                if valid and set(bindings) == names:
+                    corrected_expected = _substitute_placeholders(expected, bindings)
+                    candidates.append(
+                        config.model_copy(update={"expected": config.expected.model_copy(update=corrected_expected)})
+                    )
+        else:
+            candidates = [config]
+
+        return [self._with_inferred_post_schema(candidate) for candidate in candidates]
+
+    @staticmethod
+    def _with_inferred_post_schema(config: NetworkEventEvaluatorCfg) -> NetworkEventEvaluatorCfg:
+        """Preserve singleton array semantics when the contract omits a schema."""
+        post_data = config.expected.post_data or {}
+        singleton_arrays = {
+            key for key, value in post_data.items() if isinstance(value, (list, tuple)) and len(value) == 1
+        }
+        if not singleton_arrays or config.post_data_schema:
+            return config
+        schema = {
+            "type": "object",
+            "properties": {key: {"type": "array", "items": {"type": "string"}} for key in singleton_arrays},
+        }
+        return config.model_copy(update={"post_data_schema": schema})
