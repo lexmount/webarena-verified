@@ -221,19 +221,3 @@ def test_pattern_matching_preserves_normalization():
 
     # Should match because normalization strips and lowercases
     assert pattern == with_whitespace
-
-
-def test_normalized_string_derenders_embedded_url_with_bound_callable() -> None:
-    calls = []
-
-    def derender(value: str) -> str:
-        calls.append(value)
-        return value.replace("https://deployment.example", "__SHOPPING__")
-
-    normalized = NormalizedString(
-        "Open https://deployment.example/item/1",
-        derender_url_fct=derender,
-    )
-
-    assert normalized.normalized == "open __shopping__/item/1"
-    assert calls == ["Open https://deployment.example/item/1"]

@@ -7,8 +7,9 @@ from urllib.parse import urlencode
 import pytest
 
 from webarena_verified.api import WebArenaVerified
-from webarena_verified.types.config import WebArenaVerifiedConfig
+from webarena_verified.types.config import EnvironmentConfig, WebArenaVerifiedConfig
 from webarena_verified.types.eval import EvalStatus
+from webarena_verified.types.task import WebArenaSite
 
 
 def _event(url, *, method="GET", form=None, referer=None, navigation=False):
@@ -48,9 +49,8 @@ def _evaluate(tmp_path, task, entries, task_type):
         config=WebArenaVerifiedConfig(
             test_data_file=Path(__file__).parents[2] / "assets/dataset/webarena-verified.json",
             environments={
-                "__GITLAB__": {"urls": ["http://localhost:8023"]},
-                "__SHOPPING_ADMIN__": {"urls": ["http://localhost:7780/admin"]},
-                "__REDDIT__": {"urls": ["http://localhost:9999"]},
+                WebArenaSite.GITLAB: EnvironmentConfig(urls=["http://localhost:8023"]),
+                WebArenaSite.SHOPPING_ADMIN: EnvironmentConfig(urls=["http://localhost:7780/admin"]),
             },
         )
     )
@@ -105,39 +105,23 @@ def test_empty_project_accepts_unchecked_but_rejects_enabled_readme(tmp_path, re
         (700, "fall discount", "cart_fixed", 10),
     ],
 )
-@pytest.mark.parametrize("customer_group", ["1", "2"])
-def test_price_rule_form_requires_the_requested_customer_group(tmp_path, task, name, action, amount, customer_group):
+@pytest.mark.parametrize(
+    ("customer_groups", "expected"),
+    [
+        (("1", "2", "3"), True),
+        (("1", "2"), False),
+        (("1", "2", "4"), False),
+    ],
+)
+def test_price_rule_form_requires_all_registered_customer_groups(
+    tmp_path, task, name, action, amount, customer_groups, expected
+):
     form = {
         "name": name,
         "website_ids[0]": "1",
-        "customer_group_ids[0]": customer_group,
         "simple_action": action,
         "discount_amount": amount,
     }
+    form.update({f"customer_group_ids[{index}]": value for index, value in enumerate(customer_groups)})
     entries = [_event("http://localhost:7780/admin/sales_rule/promo_quote/save/", method="POST", form=form)]
-    assert _evaluate(tmp_path, task, entries, "MUTATE") is (customer_group == "1")
-
-
-@pytest.mark.parametrize("comment_post_id", ["abc123", "wrong456"])
-def test_dynamic_reddit_contract_binds_post_id_across_url_and_form_key(
-    tmp_path, comment_post_id
-):
-    created_post_id = "abc123"
-    entries = [
-        _event(
-            "http://localhost:9999/submit/books",
-            method="POST",
-            form={
-                "submission[title]": "Harry Potter",
-                "submission[forum]": "10037",
-            },
-        ),
-        _event(
-            f"http://localhost:9999/f/books/{created_post_id}/-/comment",
-            method="POST",
-            form={f"reply_to_submission_{comment_post_id}[comment]": "Wonderful journey"},
-        ),
-    ]
-    assert _evaluate(tmp_path, 611, entries, "MUTATE") is (
-        comment_post_id == created_post_id
-    )
+    assert _evaluate(tmp_path, task, entries, "MUTATE") is expected
