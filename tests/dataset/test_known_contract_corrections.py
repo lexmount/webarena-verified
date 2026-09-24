@@ -39,3 +39,30 @@ def test_indexed_form_fields_are_not_encoded_as_singleton_alternatives(
         assert post_data["customer_group_ids[0]"] == "1"
         assert "website_ids" not in post_data
         assert "customer_group_ids" not in post_data
+
+
+def test_multiple_collaborator_invites_match_each_required_request(
+    dataset_by_task_id: dict[int, dict[str, Any]],
+) -> None:
+    for task_id in (567, 568, 569, 570):
+        evaluators = [
+            item
+            for item in dataset_by_task_id[task_id]["eval"]
+            if item["evaluator"] == "NetworkEventEvaluator"
+        ]
+        assert len(evaluators) > 1
+        assert all(item["last_event_only"] is False for item in evaluators)
+
+
+def test_single_assignee_id_is_typed_as_an_array(
+    dataset_by_task_id: dict[int, dict[str, Any]],
+) -> None:
+    evaluator = next(
+        item
+        for item in dataset_by_task_id[811]["eval"]
+        if item["evaluator"] == "NetworkEventEvaluator"
+    )
+    assert evaluator["post_data_schema"]["properties"]["$.issue.assignee_ids"] == {
+        "type": "array",
+        "items": {"type": "integer"},
+    }

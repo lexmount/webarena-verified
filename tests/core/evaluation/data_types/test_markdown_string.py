@@ -462,3 +462,14 @@ def test_equality_transitivity():
     assert md1 == md2
     assert md2 == md3
     assert md1 == md3
+
+
+def test_markdown_string_derenders_embedded_url() -> None:
+    normalized = MarkdownString(
+        "[Item](https://deployment.example/item/1)",
+        derender_url_fct=lambda value: value.replace(
+            "https://deployment.example", "__SHOPPING__"
+        ),
+    )
+
+    assert normalized.normalized == "[Item](__SHOPPING__/item/1)"

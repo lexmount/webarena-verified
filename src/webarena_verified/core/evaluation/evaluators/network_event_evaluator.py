@@ -13,7 +13,7 @@ from urllib.parse import parse_qs, urlsplit
 from webarena_verified.core.evaluation.data_types import URL
 from webarena_verified.core.utils import logger
 from webarena_verified.core.utils.jsonpath_utils import extract_jsonpath_value, is_jsonpath_key
-from webarena_verified.types.eval import EvalAssertion, EvalStatus, TaskEvalContext
+from webarena_verified.types.eval import EvalAssertion, EvalStatus, EvaluatorResult, TaskEvalContext
 from webarena_verified.types.task import NetworkEventEvaluatorCfg, NetworkEventSpec
 from webarena_verified.types.tracing import NetworkEvent
 
@@ -21,6 +21,49 @@ from .base import BaseEvaluator
 
 if TYPE_CHECKING:
     from webarena_verified.types.common import SerializableMappingProxyType
+
+_DYNAMIC_FIELD = re.compile(r"\{\{([a-zA-Z_][a-zA-Z0-9_]*)\}\}")
+
+
+def _match_dynamic_field(template: str, actual: Any, bindings: dict[str, str]) -> bool:
+    """Match one template and bind every named field consistently."""
+    if not isinstance(actual, (str, int, float)):
+        return False
+    cursor = 0
+    parts = ["^"]
+    local_groups: set[str] = set()
+    for match in _DYNAMIC_FIELD.finditer(template):
+        parts.append(re.escape(template[cursor : match.start()]))
+        name = match.group(1)
+        if name in bindings:
+            parts.append(re.escape(bindings[name]))
+        elif name in local_groups:
+            parts.append(f"(?P={name})")
+        else:
+            parts.append(f"(?P<{name}>[^/?#&]+)")
+            local_groups.add(name)
+        cursor = match.end()
+    parts.extend((re.escape(template[cursor:]), "$"))
+    matched = re.fullmatch("".join(parts), str(actual))
+    if matched is None:
+        return False
+    bindings.update(matched.groupdict())
+    return True
+
+
+def _substitute_dynamic_fields(value: Any, bindings: dict[str, str]) -> Any:
+    if isinstance(value, str):
+        return _DYNAMIC_FIELD.sub(lambda match: bindings[match.group(1)], value)
+    if isinstance(value, list):
+        return [_substitute_dynamic_fields(item, bindings) for item in value]
+    if isinstance(value, tuple):
+        return tuple(_substitute_dynamic_fields(item, bindings) for item in value)
+    if isinstance(value, dict):
+        return {
+            _substitute_dynamic_fields(key, bindings): _substitute_dynamic_fields(item, bindings)
+            for key, item in value.items()
+        }
+    return value
 
 
 class NetworkEventEvaluator(BaseEvaluator[NetworkEventEvaluatorCfg]):
@@ -39,6 +82,85 @@ class NetworkEventEvaluator(BaseEvaluator[NetworkEventEvaluatorCfg]):
     - Step 3: Normalize both using schema-based normalization
     - Step 4: Compare normalized values structurally
     """
+
+    def evaluate(
+        self, *, context: TaskEvalContext, config: NetworkEventEvaluatorCfg
+    ) -> EvaluatorResult:
+        """Resolve fields produced by an earlier request before normal evaluation."""
+        candidates = self._resolve_dynamic_configs(context, config)
+        if not candidates:
+            return super().evaluate(context=context, config=config)
+        first_result = None
+        for candidate in candidates:
+            result = super().evaluate(context=context, config=candidate)
+            first_result = first_result or result
+            if result.score == 1:
+                return result
+        assert first_result is not None
+        return first_result
+
+    def _resolve_dynamic_configs(
+        self, context: TaskEvalContext, config: NetworkEventEvaluatorCfg
+    ) -> list[NetworkEventEvaluatorCfg]:
+        expected = config.expected.model_dump(mode="python", exclude_none=False)
+        names = set(_DYNAMIC_FIELD.findall(repr(expected)))
+        if not names:
+            return [config]
+
+        urls = expected.get("url")
+        url_templates = list(urls) if isinstance(urls, (list, tuple)) else [urls]
+        post_templates = expected.get("post_data") or {}
+        candidates = []
+        for event in context.network_trace.evaluation_events:
+            if expected.get("http_method") and event.http_method.lower() != expected["http_method"].lower():
+                continue
+            bindings: dict[str, str] = {}
+            dynamic_urls = [
+                value
+                for value in url_templates
+                if isinstance(value, str) and _DYNAMIC_FIELD.search(value)
+            ]
+            if dynamic_urls:
+                actual_url = context.config.derender_url(
+                    event.url, sites=context.task.sites, strict=False
+                )
+                if not any(_match_dynamic_field(value, actual_url, bindings) for value in dynamic_urls):
+                    continue
+            actual_post = dict(event.post_data or {})
+            valid = True
+            for key_template, value_template in post_templates.items():
+                if _DYNAMIC_FIELD.search(key_template):
+                    matched_key = next(
+                        (
+                            key
+                            for key in actual_post
+                            if _match_dynamic_field(key_template, key, bindings.copy())
+                        ),
+                        None,
+                    )
+                    if matched_key is None or not _match_dynamic_field(
+                        key_template, matched_key, bindings
+                    ):
+                        valid = False
+                        break
+                    actual_value = actual_post[matched_key]
+                else:
+                    actual_value = actual_post.get(key_template)
+                if (
+                    isinstance(value_template, str)
+                    and _DYNAMIC_FIELD.search(value_template)
+                    and not _match_dynamic_field(value_template, actual_value, bindings)
+                ):
+                    valid = False
+                    break
+            if valid and set(bindings) == names:
+                resolved = _substitute_dynamic_fields(expected, bindings)
+                candidates.append(
+                    config.model_copy(
+                        update={"expected": config.expected.model_copy(update=resolved)}
+                    )
+                )
+        return candidates
 
     def _get_actual_value(self, context: TaskEvalContext, config: NetworkEventEvaluatorCfg) -> list[NetworkEventSpec]:
         """Extract and navigate to actual value from network events.

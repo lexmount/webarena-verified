@@ -15546,6 +15546,7 @@
       },
       {
         "evaluator": "NetworkEventEvaluator",
+        "last_event_only": false,
         "expected": {
           "url": "__GITLAB__/api/v4/projects/184/members",
           "http_method": "POST",
@@ -15555,6 +15556,7 @@
       },
       {
         "evaluator": "NetworkEventEvaluator",
+        "last_event_only": false,
         "expected": {
           "url": "__GITLAB__/api/v4/projects/184/members",
           "http_method": "POST",
@@ -15581,6 +15583,7 @@
       },
       {
         "evaluator": "NetworkEventEvaluator",
+        "last_event_only": false,
         "expected": {
           "url": "__GITLAB__/api/v4/projects/174/members",
           "http_method": "POST",
@@ -15590,6 +15593,7 @@
       },
       {
         "evaluator": "NetworkEventEvaluator",
+        "last_event_only": false,
         "expected": {
           "url": "__GITLAB__/api/v4/projects/174/members",
           "http_method": "POST",
@@ -15619,6 +15623,7 @@
       },
       {
         "evaluator": "NetworkEventEvaluator",
+        "last_event_only": false,
         "expected": {
           "url": "__GITLAB__/api/v4/projects/185/members",
           "http_method": "POST",
@@ -15628,6 +15633,7 @@
       },
       {
         "evaluator": "NetworkEventEvaluator",
+        "last_event_only": false,
         "expected": {
           "url": "__GITLAB__/api/v4/projects/185/members",
           "http_method": "POST",
@@ -15657,6 +15663,7 @@
       },
       {
         "evaluator": "NetworkEventEvaluator",
+        "last_event_only": false,
         "expected": {
           "url": "__GITLAB__/api/v4/projects/190/members",
           "http_method": "POST",
@@ -15666,6 +15673,7 @@
       },
       {
         "evaluator": "NetworkEventEvaluator",
+        "last_event_only": false,
         "expected": {
           "url": "__GITLAB__/api/v4/projects/190/members",
           "http_method": "POST",
@@ -15675,6 +15683,7 @@
       },
       {
         "evaluator": "NetworkEventEvaluator",
+        "last_event_only": false,
         "expected": {
           "url": "__GITLAB__/api/v4/projects/190/members",
           "http_method": "POST",
@@ -15684,6 +15693,7 @@
       },
       {
         "evaluator": "NetworkEventEvaluator",
+        "last_event_only": false,
         "expected": {
           "url": "__GITLAB__/api/v4/projects/190/members",
           "http_method": "POST",
@@ -23950,6 +23960,7 @@
       },
       {
         "evaluator": "NetworkEventEvaluator",
+        "post_data_schema": {"type": "object", "properties": {"$.issue.assignee_ids": {"type": "array", "items": {"type": "integer"}}}},
         "ignored_query_params": ["serializer"],
         "expected": {
           "url": "__GITLAB__/a11yproject/a11yproject.com/-/issues/1478.json",

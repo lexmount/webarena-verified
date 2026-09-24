@@ -50,6 +50,7 @@ def _evaluate(tmp_path, task, entries, task_type):
             environments={
                 "__GITLAB__": {"urls": ["http://localhost:8023"]},
                 "__SHOPPING_ADMIN__": {"urls": ["http://localhost:7780/admin"]},
+                "__REDDIT__": {"urls": ["http://localhost:9999"]},
             },
         )
     )
@@ -115,3 +116,28 @@ def test_price_rule_form_requires_the_requested_customer_group(tmp_path, task, n
     }
     entries = [_event("http://localhost:7780/admin/sales_rule/promo_quote/save/", method="POST", form=form)]
     assert _evaluate(tmp_path, task, entries, "MUTATE") is (customer_group == "1")
+
+
+@pytest.mark.parametrize("comment_post_id", ["abc123", "wrong456"])
+def test_dynamic_reddit_contract_binds_post_id_across_url_and_form_key(
+    tmp_path, comment_post_id
+):
+    created_post_id = "abc123"
+    entries = [
+        _event(
+            "http://localhost:9999/submit/books",
+            method="POST",
+            form={
+                "submission[title]": "Harry Potter",
+                "submission[forum]": "10037",
+            },
+        ),
+        _event(
+            f"http://localhost:9999/f/books/{created_post_id}/-/comment",
+            method="POST",
+            form={f"reply_to_submission_{comment_post_id}[comment]": "Wonderful journey"},
+        ),
+    ]
+    assert _evaluate(tmp_path, 611, entries, "MUTATE") is (
+        comment_post_id == created_post_id
+    )

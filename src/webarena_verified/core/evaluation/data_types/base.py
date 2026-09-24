@@ -242,12 +242,7 @@ class NormalizedType(Generic[T], ABC):
         if not s or is_regexp(s):
             return s
 
-        # Step 0: Try to derender URLs (best effort, no exceptions)
-        # Let the derender_url_fct decide whether to process the string
-        if self.derender_url_fct is not None and "http" in s:
-            with contextlib.suppress(Exception):
-                s = self.derender_url_fct(s, strict=False)
-                # If derendering fails for any reason, continue with original string
+        s = self._derender_embedded_url(s)
 
         # Step 1: Remove common non-semantic marks BEFORE NFKC normalization
         # U+2122 ™, U+00AE ®, U+2120 ℠, U+00A9 ©
@@ -286,3 +281,10 @@ class NormalizedType(Generic[T], ABC):
 
         # Step 5: Casefold for robust case-insensitive comparison
         return s.casefold()
+
+    def _derender_embedded_url(self, value: str) -> str:
+        """Best-effort derendering for callables whose options are already bound."""
+        if value and "http" in value and self.derender_url_fct is not None:
+            with contextlib.suppress(Exception):
+                return self.derender_url_fct(value)
+        return value
