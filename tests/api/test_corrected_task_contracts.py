@@ -40,7 +40,7 @@ def _event(url, *, method="GET", form=None, referer=None, navigation=False):
     }
 
 
-def _evaluate(tmp_path, task, entries, task_type):
+def _evaluate(tmp_path, task, entries, task_type, *, status="SUCCESS", retrieved_data=None):
     path = tmp_path / "network.har"
     path.write_text(
         json.dumps({"log": {"version": "1.2", "creator": {"name": "pytest", "version": "1"}, "entries": entries}})
@@ -50,6 +50,7 @@ def _evaluate(tmp_path, task, entries, task_type):
             test_data_file=Path(__file__).parents[2] / "assets/dataset/webarena-verified.json",
             environments={
                 WebArenaSite.GITLAB: EnvironmentConfig(urls=["http://localhost:8023"]),
+                WebArenaSite.SHOPPING: EnvironmentConfig(urls=["http://localhost:7770"]),
                 WebArenaSite.SHOPPING_ADMIN: EnvironmentConfig(urls=["http://localhost:7780/admin"]),
             },
         )
@@ -59,12 +60,31 @@ def _evaluate(tmp_path, task, entries, task_type):
             task_id=task,
             agent_response={
                 "task_type": task_type,
-                "status": "SUCCESS",
-                "retrieved_data": None,
+                "status": status,
+                "retrieved_data": retrieved_data,
             },
             network_trace=path,
         ).status
         == EvalStatus.SUCCESS
+    )
+
+
+@pytest.mark.parametrize(
+    ("retrieved_data", "expected"),
+    [(None, True), ([0], False)],
+)
+def test_defaulted_null_retrieved_data_is_still_compared(tmp_path, retrieved_data, expected):
+    entries = [_event("http://localhost:7770/sales/order/history/", navigation=True)]
+    assert (
+        _evaluate(
+            tmp_path,
+            319,
+            entries,
+            "RETRIEVE",
+            status="NOT_FOUND_ERROR",
+            retrieved_data=retrieved_data,
+        )
+        is expected
     )
 
 
