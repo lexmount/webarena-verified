@@ -149,15 +149,20 @@ def test_route_contracts_follow_the_intent_origin_to_destination(
         740: "-79.9427192,40.4441897;-73.9935443,40.7505085",
         741: "-79.9427192,40.4441897;-71.0621475,42.3662922",
         759: "-71.060511,42.3554334;-74.0060152,40.7127281",
-        760: "-75.4716115,40.6022552;-74.4041622,40.0757384",
+        760: "-75.442,40.651;-74.032,40.743",
     }
     for task_id, coordinate_pair in coordinates.items():
         task = dataset_by_task_id[task_id]
         evaluator = next(item for item in task["eval"] if item["evaluator"] == "NetworkEventEvaluator")
-        assert task["revision"] == (5 if task_id in {265, 266, 267, 268} else 4 if task_id in {759, 760} else 3)
+        assert task["revision"] == (5 if task_id in {265, 266, 267, 268, 760} else 4 if task_id == 759 else 3)
         if task_id not in {265, 266, 267, 268}:
             assert evaluator["navigation_only"] is False
         assert coordinate_pair in evaluator["expected"]["url"]
+
+    task_760_url = next(
+        item for item in dataset_by_task_id[760]["eval"] if item["evaluator"] == "NetworkEventEvaluator"
+    )["expected"]["url"]
+    assert "-74.4041622,40.0757384" not in task_760_url
 
 
 def test_replay_specific_changes_do_not_weaken_canonical_contracts(

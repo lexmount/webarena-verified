@@ -22274,12 +22274,12 @@
         "navigation_only": false,
         "ignored_query_params_patterns": [".*"],
         "expected": {
-          "url": "^.*/route/v1/.*/-75.4716115,40.6022552;-74.4041622,40.0757384.*$",
+          "url": "^.*/route/v1/.*/-75.442,40.651;-74.032,40.743.*$",
           "headers": {"Cookie": "^(?!.*_osm_directions_engine=fossgis_osrm_(?:bicycle|foot)).*$"}
         }
       }
     ],
-    "revision": 4
+    "revision": 5
   },
   {
     "sites": ["map"],

@@ -116,19 +116,20 @@ def test_hollister_mass_status_uses_the_native_filtered_grid_request(wa: WebAren
 
 
 @pytest.mark.parametrize(
-    ("task_id", "origin", "destination", "cookie"),
+    ("task_id", "origin", "destination", "cookie", "rejected_destination"),
     [
-        (265, "-71.0579762,42.3603713", "-68.2177005,44.3494709", ""),
-        (266, "-70.2545299,43.6599147", "-68.2177005,44.3494709", ""),
-        (267, "-68.767507,44.8030715", "-68.2177005,44.3494709", ""),
+        (265, "-71.0579762,42.3603713", "-68.2177005,44.3494709", "", None),
+        (266, "-70.2545299,43.6599147", "-68.2177005,44.3494709", "", None),
+        (267, "-68.767507,44.8030715", "-68.2177005,44.3494709", "", None),
         (
             268,
             "-68.8315387,44.0478975",
             "-68.2177005,44.3494709",
             "_osm_directions_engine=fossgis_osrm_bicycle",
+            None,
         ),
-        (759, "-71.060511,42.3554334", "-74.0060152,40.7127281", ""),
-        (760, "-75.4716115,40.6022552", "-74.4041622,40.0757384", ""),
+        (759, "-71.060511,42.3554334", "-74.0060152,40.7127281", "", None),
+        (760, "-75.442,40.651", "-74.032,40.743", "", "-74.4041622,40.0757384"),
     ],
 )
 def test_route_contracts_require_intent_direction(
@@ -138,6 +139,7 @@ def test_route_contracts_require_intent_direction(
     origin: str,
     destination: str,
     cookie: str,
+    rejected_destination: str | None,
 ) -> None:
     expected_agent_response = wa.get_task(task_id).expected_agent_response.model_dump(mode="json")
 
@@ -187,6 +189,19 @@ def test_route_contracts_require_intent_direction(
         )
         == 0.0
     )
+    if rejected_destination is not None:
+        assert (
+            float(
+                _evaluate(
+                    wa,
+                    tmp_path,
+                    task_id,
+                    route_trace(origin, rejected_destination),
+                    expected_agent_response,
+                ).score
+            )
+            == 0.0
+        )
 
 
 @pytest.mark.parametrize("task_id", [742, 743, 745, 746])
