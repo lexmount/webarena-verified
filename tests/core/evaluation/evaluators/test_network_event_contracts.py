@@ -129,7 +129,13 @@ def test_hollister_mass_status_uses_the_native_filtered_grid_request(wa: WebAren
             None,
         ),
         (759, "-71.060511,42.3554334", "-74.0060152,40.7127281", "", None),
-        (760, "-75.442,40.651", "-74.032,40.743", "", "-74.4041622,40.0757384"),
+        (
+            760,
+            "-75.44225386838299,40.651163100000005",
+            "-74.0323752,40.7433066",
+            "",
+            "-74.4041622,40.0757384",
+        ),
     ],
 )
 def test_route_contracts_require_intent_direction(
@@ -197,6 +203,19 @@ def test_route_contracts_require_intent_direction(
                     tmp_path,
                     task_id,
                     route_trace(origin, rejected_destination),
+                    expected_agent_response,
+                ).score
+            )
+            == 0.0
+        )
+    if task_id == 760:
+        assert (
+            float(
+                _evaluate(
+                    wa,
+                    tmp_path,
+                    task_id,
+                    route_trace("-75.442,40.651", "-74.032,40.743"),
                     expected_agent_response,
                 ).score
             )
