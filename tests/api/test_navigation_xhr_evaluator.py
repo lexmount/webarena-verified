@@ -109,3 +109,43 @@ def test_navigate_task_checks_the_final_order_grid(tmp_path: Path, ending: str) 
     )
 
     assert (result.status == EvalStatus.SUCCESS) is (ending in {"fraud", "notification"})
+
+
+def test_navigate_task_with_empty_har_is_a_normal_failure(tmp_path: Path) -> None:
+    """A valid empty capture must reach the evaluator instead of crashing as Playwright JSONL."""
+    base_url = "http://localhost:7780/admin"
+    trace_path = tmp_path / "network.har"
+    trace_path.write_text(
+        json.dumps(
+            {
+                "log": {
+                    "version": "1.2",
+                    "creator": {"name": "pytest", "version": "1"},
+                    "entries": [],
+                }
+            }
+        )
+    )
+    evaluator = WebArenaVerified(
+        config=WebArenaVerifiedConfig(
+            test_data_file=Path(__file__).parents[2] / "assets/dataset/webarena-verified.json",
+            environments={
+                "__SHOPPING_ADMIN__": {
+                    "urls": [base_url],
+                    "active_url_idx": 0,
+                    "use_header_login": True,
+                    "credentials": {"username": "admin", "password": "admin1234"},
+                }
+            },
+        )
+    )
+
+    result = evaluator.evaluate_task(
+        task_id=676,
+        agent_response={"task_type": "NAVIGATE", "status": "SUCCESS", "retrieved_data": None},
+        network_trace=trace_path,
+    )
+
+    assert result.status == EvalStatus.FAILURE
+    assert result.score == 0
+    assert result.error_msg is None

@@ -1,5 +1,7 @@
 """Functional tests for NetworkTrace."""
 
+import json
+
 import pytest
 
 from webarena_verified.types.tracing import NetworkTrace
@@ -25,6 +27,29 @@ def test_from_har_loads_successfully(test_har_path):
     assert trace.src_file == test_har_path
     assert len(trace.events) > 0
     assert len(trace.evaluation_events) > 0
+
+
+def test_empty_har_remains_a_valid_har_trace(tmp_path):
+    """An empty HAR is evidence of no observed requests, not another trace format."""
+    trace_path = tmp_path / "network.har"
+    trace_path.write_text(
+        json.dumps(
+            {
+                "log": {
+                    "version": "1.2",
+                    "creator": {"name": "pytest", "version": "1"},
+                    "entries": [],
+                }
+            }
+        )
+    )
+
+    trace = NetworkTrace.from_content(trace_path)
+
+    assert trace.is_playwright is False
+    assert trace.src_file == trace_path
+    assert trace.events == ()
+    assert trace.evaluation_events == ()
 
 
 @pytest.mark.skip(reason="Skipped to focus on other tests")
