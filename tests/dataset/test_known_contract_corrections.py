@@ -139,10 +139,10 @@ def test_route_contracts_follow_the_intent_origin_to_destination(
     dataset_by_task_id: dict[int, dict[str, Any]],
 ) -> None:
     coordinates = {
-        265: "-71.0579762,42.3603713;-68.2177005,44.3494709",
-        266: "-70.2545299,43.6599147;-68.2177005,44.3494709",
-        267: "-68.767507,44.8030715;-68.2177005,44.3494709",
-        268: "-68.8315387,44.0478975;-68.2177005,44.3494709",
+        265: "-71.05777777777777,42.36027777777778;-68.21666666666667,44.35",
+        266: "-70.255,43.66;-68.21666666666667,44.35",
+        267: "-68.7675,44.80305555555555;-68.21666666666667,44.35",
+        268: "-68.83166666666666,44.04805555555556;-68.21666666666667,44.35",
         737: "-79.9427192,40.4441897;-75.1718916,39.9011873",
         738: "-79.9427192,40.4441897;-75.1712951,39.9042046",
         739: "-79.9427192,40.4441897;-73.9265212,40.8295828",
@@ -154,7 +154,7 @@ def test_route_contracts_follow_the_intent_origin_to_destination(
     for task_id, coordinate_pair in coordinates.items():
         task = dataset_by_task_id[task_id]
         evaluator = next(item for item in task["eval"] if item["evaluator"] == "NetworkEventEvaluator")
-        expected_revision = 6 if task_id == 760 else 5 if task_id in {265, 266, 267, 268} else 4 if task_id == 759 else 3
+        expected_revision = 6 if task_id in {265, 266, 267, 268, 760} else 4 if task_id == 759 else 3
         assert task["revision"] == expected_revision
         if task_id not in {265, 266, 267, 268}:
             assert evaluator["navigation_only"] is False

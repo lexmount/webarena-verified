@@ -6722,10 +6722,10 @@
       {
         "evaluator": "NetworkEventEvaluator",
         "ignored_query_params_patterns": [".*"],
-        "expected": {"url": "^.*/route/v1/.*/-71.0579762,42.3603713;-68.2177005,44.3494709.*$"}
+        "expected": {"url": "^.*/route/v1/.*/-71.05777777777777,42.36027777777778;-68.21666666666667,44.35.*$"}
       }
     ],
-    "revision": 5
+    "revision": 6
   },
   {
     "sites": ["wikipedia", "map"],
@@ -6762,10 +6762,10 @@
       {
         "evaluator": "NetworkEventEvaluator",
         "ignored_query_params_patterns": [".*"],
-        "expected": {"url": "^.*/route/v1/.*/-70.2545299,43.6599147;-68.2177005,44.3494709.*$"}
+        "expected": {"url": "^.*/route/v1/.*/-70.255,43.66;-68.21666666666667,44.35.*$"}
       }
     ],
-    "revision": 5
+    "revision": 6
   },
   {
     "sites": ["wikipedia", "map"],
@@ -6803,12 +6803,12 @@
         "evaluator": "NetworkEventEvaluator",
         "ignored_query_params_patterns": [".*"],
         "expected": {
-          "url": "^.*/route/.*/-68.767507,44.8030715;-68.2177005,44.3494709.*$",
+          "url": "^.*/route/.*/-68.7675,44.80305555555555;-68.21666666666667,44.35.*$",
           "headers": {"Cookie": "^(?!.*_osm_directions_engine=fossgis_osrm_(?:bicycle|foot)).*$"}
         }
       }
     ],
-    "revision": 5
+    "revision": 6
   },
   {
     "sites": ["wikipedia", "map"],
@@ -6846,12 +6846,12 @@
         "evaluator": "NetworkEventEvaluator",
         "ignored_query_params_patterns": [".*"],
         "expected": {
-          "url": "^.*/route/v1/.*/-68.8315387,44.0478975;-68.2177005,44.3494709.*$",
+          "url": "^.*/route/v1/.*/-68.83166666666666,44.04805555555556;-68.21666666666667,44.35.*$",
           "headers": {"Cookie": "^.*_osm_directions_engine=fossgis_osrm_bicycle.*$"}
         }
       }
     ],
-    "revision": 5
+    "revision": 6
   },
   {
     "sites": ["shopping"],
