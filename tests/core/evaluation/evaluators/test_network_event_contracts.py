@@ -8,6 +8,9 @@ from urllib.parse import urlencode
 import pytest
 
 from webarena_verified import WebArenaVerified
+from webarena_verified.core.evaluation.evaluators.network_event_evaluator import NetworkEventEvaluator
+from webarena_verified.types.eval import TaskEvalContext
+from webarena_verified.types.tracing import NetworkTrace
 
 
 def _entry(
@@ -43,13 +46,7 @@ def _entry(
     }
 
 
-def _evaluate(
-    wa: WebArenaVerified,
-    tmp_path: Path,
-    task_id: int,
-    entries: list[dict[str, Any]],
-    agent_response: dict[str, Any] | None = None,
-):
+def _write_trace(tmp_path: Path, task_id: int, entries: list[dict[str, Any]]) -> Path:
     trace = tmp_path / f"task-{task_id}.har"
     trace.write_text(
         json.dumps(
@@ -62,11 +59,48 @@ def _evaluate(
             }
         )
     )
+    return trace
+
+
+def _evaluate(
+    wa: WebArenaVerified,
+    tmp_path: Path,
+    task_id: int,
+    entries: list[dict[str, Any]],
+    agent_response: dict[str, Any] | None = None,
+):
+    trace = _write_trace(tmp_path, task_id, entries)
     return wa.evaluate_task(
         task_id=task_id,
         agent_response=agent_response or {"task_type": "MUTATE", "status": "SUCCESS", "retrieved_data": None},
         network_trace=trace,
     )
+
+
+def _dynamic_comment_entries() -> list[dict[str, Any]]:
+    return [
+        _entry(
+            method="POST",
+            url="http://localhost:9999/submit/books",
+            post_data={"submission[title]": "Harry Potter", "submission[forum]": "10037"},
+            status=302,
+            mime_type="application/x-www-form-urlencoded",
+        ),
+        _entry(
+            method="POST",
+            url="http://localhost:9999/f/books/4242/-/comment",
+            post_data={"reply_to_submission_4242[comment]": "Wonderful journey"},
+            status=302,
+            mime_type="application/x-www-form-urlencoded",
+        ),
+        _entry(
+            method="POST",
+            url="http://localhost:9999/f/books/9999/-/comment",
+            post_data={"reply_to_submission_9999[comment]": "wrong final comment"},
+            status=302,
+            mime_type="application/x-www-form-urlencoded",
+        ),
+    ]
 
 
 def test_repeated_endpoint_contracts_match_distinct_request_bodies(wa: WebArenaVerified, tmp_path: Path) -> None:
@@ -372,6 +406,29 @@ def test_dynamic_contract_binds_one_value_across_url_and_form_key(wa: WebArenaVe
     entries.pop()
     entries[2]["request"]["postData"]["text"] = urlencode({"reply_to_submission_9999[comment]": "Wonderful journey"})
     assert float(_evaluate(wa, tmp_path, 611, entries).score) == 0.0
+
+
+def test_dynamic_contract_last_event_only_applies_across_runtime_bindings(
+    wa: WebArenaVerified, tmp_path: Path
+) -> None:
+    assert float(_evaluate(wa, tmp_path, 611, _dynamic_comment_entries()).score) == 0.0
+
+
+def test_dynamic_contract_any_event_mode_accepts_an_earlier_runtime_binding(
+    wa: WebArenaVerified, tmp_path: Path
+) -> None:
+    task = wa.get_task(611)
+    comment_config = task.network_event_evaluator_cfgs[1].model_copy(update={"last_event_only": False})
+    entries = _dynamic_comment_entries()
+
+    context = TaskEvalContext(
+        task=task,
+        agent_response_raw=None,
+        network_trace=NetworkTrace.from_content(_write_trace(tmp_path, 611, entries)),
+        config=wa.config,
+    )
+
+    assert float(NetworkEventEvaluator().evaluate(context=context, config=comment_config).score) == 1.0
 
 
 def test_dynamic_post_binding_does_not_split_last_event_stream(wa: WebArenaVerified, tmp_path: Path) -> None:

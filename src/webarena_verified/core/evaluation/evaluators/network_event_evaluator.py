@@ -798,6 +798,7 @@ class NetworkEventEvaluator(BaseEvaluator[NetworkEventEvaluatorCfg]):
             tuple[tuple[str, str], ...], tuple[NetworkEventEvaluatorCfg, tuple[tuple[str, str], ...]]
         ] = {}
         events_by_stream: dict[tuple[tuple[str, str], ...], list[NetworkEvent]] = {}
+        last_binding_key: tuple[tuple[str, str], ...] | None = None
 
         if names:
             raw_urls = expected.get("url")
@@ -821,9 +822,15 @@ class NetworkEventEvaluator(BaseEvaluator[NetworkEventEvaluatorCfg]):
                 events_by_stream.setdefault(stream_key, []).append(event)
 
                 bindings = self._bind_post_placeholders(post_templates, event.post_data or {}, bindings)
+                if config.last_event_only:
+                    # The last matching endpoint owns the verdict even when a
+                    # different runtime binding matched correctly earlier.
+                    last_binding_key = None
                 if bindings is not None and set(bindings) == names:
                     corrected_expected = _substitute_placeholders(expected, bindings)
                     binding_key = tuple(sorted(bindings.items()))
+                    if config.last_event_only:
+                        last_binding_key = binding_key
                     if binding_key not in candidates_by_binding:
                         candidates_by_binding[binding_key] = (
                             config.model_copy(
@@ -832,9 +839,13 @@ class NetworkEventEvaluator(BaseEvaluator[NetworkEventEvaluatorCfg]):
                             stream_key,
                         )
 
+            if config.last_event_only:
+                candidate_items = [candidates_by_binding[last_binding_key]] if last_binding_key is not None else []
+            else:
+                candidate_items = list(candidates_by_binding.values())
             candidates = [
                 (candidate, tuple(events_by_stream[stream_key]))
-                for candidate, stream_key in candidates_by_binding.values()
+                for candidate, stream_key in candidate_items
             ]
         else:
             candidates = [(config, None)]
