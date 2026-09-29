@@ -149,7 +149,7 @@ def test_route_contracts_follow_the_intent_origin_to_destination(
         740: "-79.9427192,40.4441897;-73.9935443,40.7505085",
         741: "-79.9427192,40.4441897;-71.0621475,42.3662922",
         759: "-71.060511,42.3554334;-74.0060152,40.7127281",
-        760: "-75.44225386838299,40.651163100000005;-74.0323752,40.7433066",
+        760: "-75.4716115,40.6022552;-74.0323752,40.7433066",
     }
     for task_id, coordinate_pair in coordinates.items():
         task = dataset_by_task_id[task_id]
@@ -164,6 +164,7 @@ def test_route_contracts_follow_the_intent_origin_to_destination(
         item for item in dataset_by_task_id[760]["eval"] if item["evaluator"] == "NetworkEventEvaluator"
     )["expected"]["url"]
     assert "-74.4041622,40.0757384" not in task_760_url
+    assert "-75.44225386838299,40.651163100000005" not in task_760_url
 
 
 def test_replay_specific_changes_do_not_weaken_canonical_contracts(
@@ -193,11 +194,44 @@ def test_repeated_member_requests_explicitly_match_any_event(
         member_evaluators = [
             item
             for item in task["eval"]
-            if item["evaluator"] == "NetworkEventEvaluator" and item["expected"]["url"].endswith("/members$")
+            if item["evaluator"] == "NetworkEventEvaluator" and item["expected"]["url"].endswith("/members")
         ]
-        assert task["revision"] == 3
+        creation = next(
+            item
+            for item in task["eval"]
+            if item["evaluator"] == "NetworkEventEvaluator"
+            and item["expected"]["url"] == "__GITLAB__/api/v4/projects"
+        )
+        assert task["revision"] == 4
+        assert creation["event_key"] == "created_project"
         assert len(member_evaluators) > 1
         assert all(item["last_event_only"] is False for item in member_evaluators)
+        assert all(
+            item["bindings"]
+            == {"project_id": {"source_event": "created_project", "response_json_path": "$.id"}}
+            for item in member_evaluators
+        )
+
+
+def test_dynamic_network_values_have_explicit_trusted_sources(
+    dataset_by_task_id: dict[int, dict[str, Any]],
+) -> None:
+    task_604 = dataset_by_task_id[604]
+    forum = next(item for item in task_604["eval"] if item["evaluator"] == "NetworkEventEvaluator")
+    assert task_604["revision"] == 3
+    assert forum["bindings"] == {"forum_id": {"allowed_values": ["10043", "10018", "10078"]}}
+
+    for task_id in (611, 612, 613, 614):
+        task = dataset_by_task_id[task_id]
+        creation, comment = [item for item in task["eval"] if item["evaluator"] == "NetworkEventEvaluator"]
+        assert task["revision"] == 3
+        assert creation["event_key"] == "created_post"
+        assert comment["bindings"] == {
+            "post_id": {
+                "source_event": "created_post",
+                "response_url_pattern": r"^__REDDIT__/f/books/(?P<value>\d+)(?:/.*)?$",
+            }
+        }
 
 
 def test_issue_assignee_array_has_an_explicit_integer_contract(

@@ -16817,10 +16817,11 @@
             "submission[forum]": "{{forum_id}}"
           },
           "response_status": 302
-        }
+        },
+        "bindings": { "forum_id": { "allowed_values": ["10043", "10018", "10078"] } }
       }
     ],
-    "revision": 2
+    "revision": 3
   },
   {
     "sites": ["reddit"],
@@ -17036,7 +17037,8 @@
           "http_method": "POST",
           "post_data": {"submission[title]": "Harry Potter", "submission[forum]": "10037"},
           "response_status": 302
-        }
+        },
+        "event_key": "created_post"
       },
       {
         "evaluator": "NetworkEventEvaluator",
@@ -17045,10 +17047,16 @@
           "http_method": "POST",
           "post_data": {"reply_to_submission_{{post_id}}[comment]": "Wonderful journey"},
           "response_status": 302
+        },
+        "bindings": {
+          "post_id": {
+            "source_event": "created_post",
+            "response_url_pattern": "^__REDDIT__/f/books/(?P<value>\\d+)(?:/.*)?$"
+          }
         }
       }
     ],
-    "revision": 2
+    "revision": 3
   },
   {
     "sites": ["reddit"],
@@ -17071,7 +17079,8 @@
           "http_method": "POST",
           "post_data": {"submission[title]": "big little lies", "submission[forum]": "10037"},
           "response_status": 302
-        }
+        },
+        "event_key": "created_post"
       },
       {
         "evaluator": "NetworkEventEvaluator",
@@ -17080,10 +17089,16 @@
           "http_method": "POST",
           "post_data": {"reply_to_submission_{{post_id}}[comment]": "can't stop it"},
           "response_status": 302
+        },
+        "bindings": {
+          "post_id": {
+            "source_event": "created_post",
+            "response_url_pattern": "^__REDDIT__/f/books/(?P<value>\\d+)(?:/.*)?$"
+          }
         }
       }
     ],
-    "revision": 2
+    "revision": 3
   },
   {
     "sites": ["reddit"],
@@ -17106,7 +17121,8 @@
           "http_method": "POST",
           "post_data": {"submission[title]": "Love story", "submission[forum]": "10037"},
           "response_status": 302
-        }
+        },
+        "event_key": "created_post"
       },
       {
         "evaluator": "NetworkEventEvaluator",
@@ -17115,10 +17131,16 @@
           "http_method": "POST",
           "post_data": {"reply_to_submission_{{post_id}}[comment]": "I cried"},
           "response_status": 302
+        },
+        "bindings": {
+          "post_id": {
+            "source_event": "created_post",
+            "response_url_pattern": "^__REDDIT__/f/books/(?P<value>\\d+)(?:/.*)?$"
+          }
         }
       }
     ],
-    "revision": 2
+    "revision": 3
   },
   {
     "sites": ["reddit"],
@@ -17141,7 +17163,8 @@
           "http_method": "POST",
           "post_data": {"submission[title]": "Gone with the wind", "submission[forum]": "10037"},
           "response_status": 302
-        }
+        },
+        "event_key": "created_post"
       },
       {
         "evaluator": "NetworkEventEvaluator",
@@ -17150,10 +17173,16 @@
           "http_method": "POST",
           "post_data": {"reply_to_submission_{{post_id}}[comment]": "It's a book with history"},
           "response_status": 302
+        },
+        "bindings": {
+          "post_id": {
+            "source_event": "created_post",
+            "response_url_pattern": "^__REDDIT__/f/books/(?P<value>\\d+)(?:/.*)?$"
+          }
         }
       }
     ],
-    "revision": 2
+    "revision": 3
   },
   {
     "sites": ["reddit"],
@@ -21522,30 +21551,37 @@
           "http_method": "POST",
           "post_data": {"name": "planner", "visibility": "private"},
           "response_status": 201
-        }
+        },
+        "event_key": "created_project"
       },
       {
         "evaluator": "NetworkEventEvaluator",
         "last_event_only": false,
         "expected": {
-          "url": "^__GITLAB__/api/v4/projects/\\d+/members$",
+          "url": "__GITLAB__/api/v4/projects/{{project_id}}/members",
           "http_method": "POST",
           "post_data": {"user_id": 5, "access_level": 30},
           "response_status": 201
+        },
+        "bindings": {
+          "project_id": {"source_event": "created_project", "response_json_path": "$.id"}
         }
       },
       {
         "evaluator": "NetworkEventEvaluator",
         "last_event_only": false,
         "expected": {
-          "url": "^__GITLAB__/api/v4/projects/\\d+/members$",
+          "url": "__GITLAB__/api/v4/projects/{{project_id}}/members",
           "http_method": "POST",
           "post_data": {"user_id": 278, "access_level": 30},
           "response_status": 201
+        },
+        "bindings": {
+          "project_id": {"source_event": "created_project", "response_json_path": "$.id"}
         }
       }
     ],
-    "revision": 3
+    "revision": 4
   },
   {
     "sites": ["gitlab"],
@@ -21572,30 +21608,37 @@
           "http_method": "POST",
           "post_data": {"name": "web_arena", "visibility": "public"},
           "response_status": 201
-        }
+        },
+        "event_key": "created_project"
       },
       {
         "evaluator": "NetworkEventEvaluator",
         "last_event_only": false,
         "expected": {
-          "url": "^__GITLAB__/api/v4/projects/\\d+/members$",
+          "url": "__GITLAB__/api/v4/projects/{{project_id}}/members",
           "http_method": "POST",
           "post_data": {"user_id": 5, "access_level": 30},
           "response_status": 201
+        },
+        "bindings": {
+          "project_id": {"source_event": "created_project", "response_json_path": "$.id"}
         }
       },
       {
         "evaluator": "NetworkEventEvaluator",
         "last_event_only": false,
         "expected": {
-          "url": "^__GITLAB__/api/v4/projects/\\d+/members$",
+          "url": "__GITLAB__/api/v4/projects/{{project_id}}/members",
           "http_method": "POST",
           "post_data": {"user_id": 278, "access_level": 30},
           "response_status": 201
+        },
+        "bindings": {
+          "project_id": {"source_event": "created_project", "response_json_path": "$.id"}
         }
       }
     ],
-    "revision": 3
+    "revision": 4
   },
   {
     "sites": ["gitlab"],
@@ -21661,40 +21704,50 @@
           "http_method": "POST",
           "post_data": {"name": "awesome-llms", "visibility": "public"},
           "response_status": 201
-        }
+        },
+        "event_key": "created_project"
       },
       {
         "evaluator": "NetworkEventEvaluator",
         "last_event_only": false,
         "expected": {
-          "url": "^__GITLAB__/api/v4/projects/\\d+/members$",
+          "url": "__GITLAB__/api/v4/projects/{{project_id}}/members",
           "http_method": "POST",
           "post_data": {"user_id": 2367, "access_level": 30},
           "response_status": 201
+        },
+        "bindings": {
+          "project_id": {"source_event": "created_project", "response_json_path": "$.id"}
         }
       },
       {
         "evaluator": "NetworkEventEvaluator",
         "last_event_only": false,
         "expected": {
-          "url": "^__GITLAB__/api/v4/projects/\\d+/members$",
+          "url": "__GITLAB__/api/v4/projects/{{project_id}}/members",
           "http_method": "POST",
           "post_data": {"user_id": 43, "access_level": 30},
           "response_status": 201
+        },
+        "bindings": {
+          "project_id": {"source_event": "created_project", "response_json_path": "$.id"}
         }
       },
       {
         "evaluator": "NetworkEventEvaluator",
         "last_event_only": false,
         "expected": {
-          "url": "^__GITLAB__/api/v4/projects/\\d+/members$",
+          "url": "__GITLAB__/api/v4/projects/{{project_id}}/members",
           "http_method": "POST",
           "post_data": {"user_id": 5, "access_level": 30},
           "response_status": 201
+        },
+        "bindings": {
+          "project_id": {"source_event": "created_project", "response_json_path": "$.id"}
         }
       }
     ],
-    "revision": 3
+    "revision": 4
   },
   {
     "sites": ["gitlab"],
@@ -21721,40 +21774,50 @@
           "http_method": "POST",
           "post_data": {"name": "llm_bulk_inference", "visibility": "private"},
           "response_status": 201
-        }
+        },
+        "event_key": "created_project"
       },
       {
         "evaluator": "NetworkEventEvaluator",
         "last_event_only": false,
         "expected": {
-          "url": "^__GITLAB__/api/v4/projects/\\d+/members$",
+          "url": "__GITLAB__/api/v4/projects/{{project_id}}/members",
           "http_method": "POST",
           "post_data": {"user_id": 2367, "access_level": 30},
           "response_status": 201
+        },
+        "bindings": {
+          "project_id": {"source_event": "created_project", "response_json_path": "$.id"}
         }
       },
       {
         "evaluator": "NetworkEventEvaluator",
         "last_event_only": false,
         "expected": {
-          "url": "^__GITLAB__/api/v4/projects/\\d+/members$",
+          "url": "__GITLAB__/api/v4/projects/{{project_id}}/members",
           "http_method": "POST",
           "post_data": {"user_id": 43, "access_level": 30},
           "response_status": 201
+        },
+        "bindings": {
+          "project_id": {"source_event": "created_project", "response_json_path": "$.id"}
         }
       },
       {
         "evaluator": "NetworkEventEvaluator",
         "last_event_only": false,
         "expected": {
-          "url": "^__GITLAB__/api/v4/projects/\\d+/members$",
+          "url": "__GITLAB__/api/v4/projects/{{project_id}}/members",
           "http_method": "POST",
           "post_data": {"user_id": 5, "access_level": 30},
           "response_status": 201
+        },
+        "bindings": {
+          "project_id": {"source_event": "created_project", "response_json_path": "$.id"}
         }
       }
     ],
-    "revision": 3
+    "revision": 4
   },
   {
     "sites": ["gitlab"],
@@ -22274,7 +22337,7 @@
         "navigation_only": false,
         "ignored_query_params_patterns": [".*"],
         "expected": {
-          "url": "^.*/route/v1/.*/-75.44225386838299,40.651163100000005;-74.0323752,40.7433066.*$",
+          "url": "^.*/route/v1/.*/-75.4716115,40.6022552;-74.0323752,40.7433066.*$",
           "headers": {"Cookie": "^(?!.*_osm_directions_engine=fossgis_osrm_(?:bicycle|foot)).*$"}
         }
       }

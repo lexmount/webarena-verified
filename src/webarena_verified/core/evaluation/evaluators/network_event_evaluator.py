@@ -7,15 +7,16 @@ and response status against expected criteria using four-step architecture.
 import re
 from collections.abc import Mapping
 from functools import partial
+from itertools import product
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, cast
-from urllib.parse import parse_qs, urlsplit
+from urllib.parse import parse_qs, urljoin, urlsplit
 
 from webarena_verified.core.evaluation.data_types import URL
 from webarena_verified.core.utils import logger
 from webarena_verified.core.utils.jsonpath_utils import extract_jsonpath_value, is_jsonpath_key
 from webarena_verified.types.eval import EvalAssertion, EvalStatus, EvaluatorResult, TaskEvalContext
-from webarena_verified.types.task import NetworkEventEvaluatorCfg, NetworkEventSpec
+from webarena_verified.types.task import NetworkEventBinding, NetworkEventEvaluatorCfg, NetworkEventSpec
 from webarena_verified.types.tracing import NetworkEvent
 
 from .base import BaseEvaluator
@@ -791,63 +792,151 @@ class NetworkEventEvaluator(BaseEvaluator[NetworkEventEvaluatorCfg]):
     def _runtime_configs(
         self, context: TaskEvalContext, config: NetworkEventEvaluatorCfg
     ) -> list[tuple[NetworkEventEvaluatorCfg, tuple[NetworkEvent, ...] | None]]:
-        """Bind placeholders and group ordered events by resolved binding."""
+        """Resolve declared placeholders and group ordered events by binding."""
         expected = config.expected.model_dump(mode="python", exclude_none=False)
         names = _placeholder_names(expected)
+        if not names:
+            return [(config, None)]
+        bindings = config.bindings or {}
+        if set(bindings) != names:
+            logger.error(
+                "Dynamic network contract for task %s must declare one trusted binding per placeholder",
+                context.task.task_id,
+            )
+            return []
+        trusted_bindings = self._trusted_binding_candidates(context, bindings)
+        if not trusted_bindings:
+            return []
+        return self._dynamic_runtime_configs(context, config, expected, trusted_bindings)
+
+    def _dynamic_runtime_configs(
+        self,
+        context: TaskEvalContext,
+        config: NetworkEventEvaluatorCfg,
+        expected: dict[str, Any],
+        trusted_bindings: list[tuple[dict[str, str], int]],
+    ) -> list[tuple[NetworkEventEvaluatorCfg, tuple[NetworkEvent, ...] | None]]:
+        """Match ordered consumer events against already trusted binding values."""
         candidates_by_binding: dict[
             tuple[tuple[str, str], ...], tuple[NetworkEventEvaluatorCfg, tuple[tuple[str, str], ...]]
         ] = {}
         events_by_stream: dict[tuple[tuple[str, str], ...], list[NetworkEvent]] = {}
         last_binding_key: tuple[tuple[str, str], ...] | None = None
+        raw_urls = expected.get("url")
+        post_templates = expected.get("post_data") or {}
+        for event_index, event in enumerate(context.network_trace.evaluation_events):
+            expected_method = expected.get("http_method")
+            if expected_method and event.http_method.lower() != expected_method.lower():
+                continue
 
-        if names:
-            raw_urls = expected.get("url")
-            url_templates = list(raw_urls) if isinstance(raw_urls, (list, tuple)) else [raw_urls]
-            post_templates = expected.get("post_data") or {}
-            for event in context.network_trace.evaluation_events:
-                expected_method = expected.get("http_method")
-                if expected_method and event.http_method.lower() != expected_method.lower():
+            matched_endpoint = False
+            for trusted, source_index in trusted_bindings:
+                if source_index >= event_index:
                     continue
-
                 stream = self._resolve_event_stream(
                     event=event,
                     context=context,
                     config=config,
                     raw_urls=raw_urls,
-                    url_templates=url_templates,
+                    bindings=trusted,
                 )
                 if stream is None:
                     continue
-                stream_key, bindings = stream
-                events_by_stream.setdefault(stream_key, []).append(event)
-
-                bindings = self._bind_post_placeholders(post_templates, event.post_data or {}, bindings)
-                if config.last_event_only:
+                if config.last_event_only and not matched_endpoint:
                     # The last matching endpoint owns the verdict even when a
-                    # different runtime binding matched correctly earlier.
+                    # different allowed binding matched correctly earlier.
                     last_binding_key = None
-                if bindings is not None and set(bindings) == names:
-                    corrected_expected = _substitute_placeholders(expected, bindings)
-                    binding_key = tuple(sorted(bindings.items()))
-                    if config.last_event_only:
-                        last_binding_key = binding_key
-                    if binding_key not in candidates_by_binding:
-                        candidates_by_binding[binding_key] = (
-                            config.model_copy(
-                                update={"expected": config.expected.model_copy(update=corrected_expected)}
-                            ),
-                            stream_key,
-                        )
+                matched_endpoint = True
+                events_by_stream.setdefault(stream, []).append(event)
 
-            if config.last_event_only:
-                candidate_items = [candidates_by_binding[last_binding_key]] if last_binding_key is not None else []
-            else:
-                candidate_items = list(candidates_by_binding.values())
-            candidates = [(candidate, tuple(events_by_stream[stream_key])) for candidate, stream_key in candidate_items]
+                resolved = self._bind_post_placeholders(post_templates, event.post_data or {}, trusted)
+                if resolved is None:
+                    continue
+                corrected_expected = _substitute_placeholders(expected, resolved)
+                binding_key = tuple(sorted(resolved.items()))
+                if config.last_event_only:
+                    last_binding_key = binding_key
+                candidates_by_binding.setdefault(
+                    binding_key,
+                    (
+                        config.model_copy(update={"expected": config.expected.model_copy(update=corrected_expected)}),
+                        stream,
+                    ),
+                )
+
+        if config.last_event_only:
+            candidate_items = [candidates_by_binding[last_binding_key]] if last_binding_key is not None else []
         else:
-            candidates = [(config, None)]
+            candidate_items = list(candidates_by_binding.values())
+        return [(candidate, tuple(events_by_stream[stream])) for candidate, stream in candidate_items]
 
-        return [(self._with_inferred_post_schema(candidate), source_event) for candidate, source_event in candidates]
+    def _trusted_binding_candidates(
+        self, context: TaskEvalContext, bindings: Mapping[str, NetworkEventBinding]
+    ) -> list[tuple[dict[str, str], int]]:
+        """Resolve bindings from closed values or successful earlier event responses."""
+        choices: list[list[tuple[str, int]]] = []
+        names: list[str] = []
+        for name, binding in bindings.items():
+            names.append(name)
+            if binding.allowed_values:
+                choices.append([(value, -1) for value in binding.allowed_values])
+                continue
+            choices.append(self._response_binding_values(context, binding))
+        if any(not values for values in choices):
+            return []
+        return [
+            (dict(zip(names, (value for value, _ in selected), strict=True)), max(index for _, index in selected))
+            for selected in product(*choices)
+        ]
+
+    def _response_binding_values(
+        self, context: TaskEvalContext, binding: NetworkEventBinding
+    ) -> list[tuple[str, int]]:
+        source_configs = [
+            item for item in context.task.network_event_evaluator_cfgs if item.event_key == binding.source_event
+        ]
+        if len(source_configs) != 1:
+            logger.error(
+                "Task %s binding source %r resolved to %s events",
+                context.task.task_id,
+                binding.source_event,
+                len(source_configs),
+            )
+            return []
+        source_config = source_configs[0]
+        values: list[tuple[str, int]] = []
+        for index, event in enumerate(context.network_trace.evaluation_events):
+            source_context = context.model_copy(
+                update={"network_trace": context.network_trace.model_copy(update={"events": (event,)})}
+            )
+            if super().evaluate(context=source_context, config=source_config).score != 1:
+                continue
+            value = self._extract_response_binding(context, event, binding)
+            if value is not None:
+                values.append((value, index))
+        return values
+
+    @staticmethod
+    def _extract_response_binding(
+        context: TaskEvalContext, event: NetworkEvent, binding: NetworkEventBinding
+    ) -> str | None:
+        if binding.response_json_path is not None:
+            content = event.response_content
+            if content is None:
+                return None
+            value = extract_jsonpath_value(content, binding.response_json_path, strict=False)
+            return str(value) if isinstance(value, (str, int, float)) and not isinstance(value, bool) else None
+
+        assert binding.response_url_pattern is not None
+        redirect_url = event.redirect_url
+        if redirect_url is None:
+            return None
+        absolute_url = urljoin(event.url, redirect_url)
+        derendered_url = context.config.derender_url(absolute_url, sites=context.task.sites, strict=False)
+        if not isinstance(derendered_url, str):
+            return None
+        matched = re.fullmatch(binding.response_url_pattern, derendered_url)
+        return matched.group("value") if matched is not None else None
 
     def _resolve_event_stream(
         self,
@@ -856,29 +945,17 @@ class NetworkEventEvaluator(BaseEvaluator[NetworkEventEvaluatorCfg]):
         context: TaskEvalContext,
         config: NetworkEventEvaluatorCfg,
         raw_urls: Any,
-        url_templates: list[Any],
-    ) -> tuple[tuple[tuple[str, str], ...], dict[str, str]] | None:
-        """Resolve URL bindings and apply the evaluator's normal prefilter."""
-        bindings: dict[str, str] = {}
-        dynamic_urls = [item for item in url_templates if isinstance(item, str) and _PLACEHOLDER.search(item)]
-        resolved_urls = raw_urls
-        if dynamic_urls:
-            actual_url = context.config.derender_url(event.url, sites=context.task.sites, strict=False)
-            for item in dynamic_urls:
-                candidate_bindings = bindings.copy()
-                if _template_match(item, actual_url, candidate_bindings):
-                    bindings = candidate_bindings
-                    resolved_urls = _substitute_placeholders(item, bindings)
-                    break
-            else:
-                return None
+        bindings: Mapping[str, str],
+    ) -> tuple[tuple[str, str], ...] | None:
+        """Apply trusted URL bindings and the evaluator's normal prefilter."""
+        resolved_urls = _substitute_placeholders(raw_urls, bindings)
 
         filter_config = config.model_copy(
             update={"expected": config.expected.model_copy(update={"url": resolved_urls})}
         )
         if not self._filter_events_by_criteria((event,), context, filter_config):
             return None
-        return tuple(sorted(bindings.items())), bindings
+        return tuple(sorted(bindings.items()))
 
     @staticmethod
     def _bind_post_placeholders(
@@ -905,56 +982,8 @@ class NetworkEventEvaluator(BaseEvaluator[NetworkEventEvaluatorCfg]):
         return bindings
 
     @staticmethod
-    def _with_inferred_post_schema(config: NetworkEventEvaluatorCfg) -> NetworkEventEvaluatorCfg:
-        """Preserve singleton array semantics when the contract omits a schema."""
-        post_data = config.expected.post_data or {}
-        singleton_arrays = {
-            key for key, value in post_data.items() if isinstance(value, (list, tuple)) and len(value) == 1
-        }
-        if not singleton_arrays or config.post_data_schema:
-            return config
-        schema = {
-            "type": "object",
-            "properties": {
-                key: {
-                    "type": "array",
-                    "items": NetworkEventEvaluator._schema_for_json_value(post_data[key][0]),
-                }
-                for key in singleton_arrays
-            },
-        }
-        return config.model_copy(update={"post_data_schema": schema})
-
-    @staticmethod
-    def _schema_for_json_value(value: Any) -> dict[str, Any]:
-        """Infer a JSON schema without coercing distinct scalar types."""
-        if value is None:
-            schema = {"type": "null"}
-        elif isinstance(value, bool):
-            schema = {"type": "boolean"}
-        elif isinstance(value, int):
-            schema = {"type": "integer"}
-        elif isinstance(value, float):
-            schema = {"type": "number"}
-        elif isinstance(value, str):
-            schema = {"type": "string"}
-        elif isinstance(value, Mapping):
-            schema = {
-                "type": "object",
-                "properties": {key: NetworkEventEvaluator._schema_for_json_value(item) for key, item in value.items()},
-            }
-        elif isinstance(value, (list, tuple)):
-            schema = {
-                "type": "array",
-                "items": NetworkEventEvaluator._schema_for_json_value(value[0]) if value else {},
-            }
-        else:
-            raise TypeError(f"Cannot infer a POST data schema for {type(value).__name__}")
-        return schema
-
-    @staticmethod
     def _matches_json_schema(value: Any, schema: Mapping[str, Any]) -> bool:
-        """Check the JSON types used by inferred singleton-array schemas."""
+        """Check the JSON types used by explicit POST-data schemas."""
         schema_type = schema.get("type")
         if schema_type == "null":
             matches = value is None

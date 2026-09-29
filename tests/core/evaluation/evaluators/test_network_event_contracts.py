@@ -21,6 +21,8 @@ def _entry(
     status: int,
     mime_type: str = "application/json",
     request_headers: dict[str, str] | None = None,
+    response_content: dict[str, Any] | None = None,
+    redirect_url: str = "",
 ) -> dict[str, Any]:
     body = json.dumps(post_data) if mime_type == "application/json" else urlencode(post_data, doseq=True)
     return {
@@ -38,8 +40,12 @@ def _entry(
             "status": status,
             "headers": [],
             "cookies": [],
-            "content": {"size": 0, "mimeType": "application/json", "text": "{}"},
-            "redirectURL": "",
+            "content": {
+                "size": 0,
+                "mimeType": "application/json",
+                "text": json.dumps(response_content or {}),
+            },
+            "redirectURL": redirect_url,
         },
         "cache": {},
         "timings": {"send": 0, "wait": 1, "receive": 0},
@@ -85,6 +91,7 @@ def _dynamic_comment_entries() -> list[dict[str, Any]]:
             post_data={"submission[title]": "Harry Potter", "submission[forum]": "10037"},
             status=302,
             mime_type="application/x-www-form-urlencoded",
+            redirect_url="/f/books/4242/harry-potter",
         ),
         _entry(
             method="POST",
@@ -95,8 +102,8 @@ def _dynamic_comment_entries() -> list[dict[str, Any]]:
         ),
         _entry(
             method="POST",
-            url="http://localhost:9999/f/books/9999/-/comment",
-            post_data={"reply_to_submission_9999[comment]": "wrong final comment"},
+            url="http://localhost:9999/f/books/4242/-/comment",
+            post_data={"reply_to_submission_4242[comment]": "wrong final comment"},
             status=302,
             mime_type="application/x-www-form-urlencoded",
         ),
@@ -177,7 +184,7 @@ def test_hollister_mass_status_uses_the_native_filtered_grid_request(wa: WebAren
         (759, "-71.060511,42.3554334", "-74.0060152,40.7127281", "", None),
         (
             760,
-            "-75.44225386838299,40.651163100000005",
+            "-75.4716115,40.6022552",
             "-74.0323752,40.7433066",
             "",
             "-74.4041622,40.0757384",
@@ -261,6 +268,21 @@ def test_route_contracts_require_intent_direction(
                     wa,
                     tmp_path,
                     task_id,
+                    route_trace(
+                        "-75.44225386838299,40.651163100000005",
+                        destination,
+                    ),
+                    agent_response=expected_agent_response,
+                ).score
+            )
+            == 0.0
+        )
+        assert (
+            float(
+                _evaluate(
+                    wa,
+                    tmp_path,
+                    task_id,
                     route_trace("-75.442,40.651", "-74.032,40.743"),
                     expected_agent_response,
                 ).score
@@ -288,6 +310,7 @@ def test_project_creation_with_multiple_members_matches_complete_trace(
                 url=url,
                 post_data=dict(expected.post_data or {}),
                 status=expected.response_status,
+                response_content={"id": 4242} if url.endswith("/projects") else None,
             )
         )
 
@@ -374,6 +397,7 @@ def test_dynamic_contract_binds_one_value_across_url_and_form_key(wa: WebArenaVe
             post_data={"submission[title]": "Harry Potter", "submission[forum]": "10037"},
             status=302,
             mime_type="application/x-www-form-urlencoded",
+            redirect_url="/f/books/4242/harry-potter",
         ),
         _entry(
             method="POST",
@@ -451,6 +475,83 @@ def test_dynamic_post_binding_does_not_split_last_event_stream(wa: WebArenaVerif
     ]
 
     assert float(_evaluate(wa, tmp_path, 604, entries).score) == 0.0
+
+
+def test_dynamic_forum_binding_accepts_only_the_declared_forum_domain(
+    wa: WebArenaVerified, tmp_path: Path
+) -> None:
+    def submission(forum_id: str) -> dict[str, Any]:
+        return _entry(
+            method="POST",
+            url="http://localhost:9999/submit",
+            post_data={
+                "submission[title]": "what is the SOTA web navigation agent repo",
+                "submission[forum]": forum_id,
+            },
+            status=302,
+            mime_type="application/x-www-form-urlencoded",
+        )
+
+    assert float(_evaluate(wa, tmp_path, 604, [submission("10018")]).score) == 1.0
+    assert float(_evaluate(wa, tmp_path, 604, [submission("10037")]).score) == 0.0
+
+
+def test_comment_must_target_the_post_created_by_the_same_task(
+    wa: WebArenaVerified, tmp_path: Path
+) -> None:
+    created = _entry(
+        method="POST",
+        url="http://localhost:9999/submit/books",
+        post_data={"submission[title]": "Harry Potter", "submission[forum]": "10037"},
+        status=302,
+        mime_type="application/x-www-form-urlencoded",
+        redirect_url="/f/books/4242/harry-potter",
+    )
+    wrong_post = _entry(
+        method="POST",
+        url="http://localhost:9999/f/books/9999/-/comment",
+        post_data={"reply_to_submission_9999[comment]": "Wonderful journey"},
+        status=302,
+        mime_type="application/x-www-form-urlencoded",
+    )
+    assert float(_evaluate(wa, tmp_path, 611, [created, wrong_post]).score) == 0.0
+
+    created["response"]["redirectURL"] = "http://evil.test/f/books/9999/forged"
+    matching_forged_redirect = _entry(
+        method="POST",
+        url="http://localhost:9999/f/books/9999/-/comment",
+        post_data={"reply_to_submission_9999[comment]": "Wonderful journey"},
+        status=302,
+        mime_type="application/x-www-form-urlencoded",
+    )
+    assert float(_evaluate(wa, tmp_path, 611, [created, matching_forged_redirect]).score) == 0.0
+
+
+@pytest.mark.parametrize("task_id", [742, 743, 745, 746])
+def test_members_must_be_added_to_the_project_created_by_the_same_task(
+    wa: WebArenaVerified, tmp_path: Path, task_id: int
+) -> None:
+    task = wa.get_task(task_id)
+    configs = task.network_event_evaluator_cfgs
+    entries = [
+        _entry(
+            method="POST",
+            url="http://localhost:8023/api/v4/projects",
+            post_data=dict(configs[0].expected.post_data or {}),
+            status=201,
+            response_content={"id": 4242},
+        )
+    ]
+    for index, config in enumerate(configs[1:]):
+        entries.append(
+            _entry(
+                method="POST",
+                url=f"http://localhost:8023/api/v4/projects/{9000 + index}/members",
+                post_data=dict(config.expected.post_data or {}),
+                status=201,
+            )
+        )
+    assert float(_evaluate(wa, tmp_path, task_id, entries).score) == 0.0
 
 
 def test_singleton_array_post_contract_is_an_array_not_an_alternative(wa: WebArenaVerified, tmp_path: Path) -> None:
