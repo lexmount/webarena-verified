@@ -7,8 +7,9 @@ from typing import Any
 import pytest
 
 from webarena_verified.api import WebArenaVerified
-from webarena_verified.types.config import WebArenaVerifiedConfig
+from webarena_verified.types.config import EnvironmentConfig, WebArenaVerifiedConfig
 from webarena_verified.types.eval import EvalStatus
+from webarena_verified.types.task import WebArenaSite
 
 
 def _entry(url: str, *, referer: str, navigation: bool) -> dict[str, Any]:
@@ -41,7 +42,7 @@ def _entry(url: str, *, referer: str, navigation: bool) -> dict[str, Any]:
 @pytest.mark.parametrize("ending", ["fraud", "notification", "cleared", "left_page", "reloaded"])
 def test_navigate_task_checks_the_final_order_grid(tmp_path: Path, ending: str) -> None:
     base_url = "http://localhost:7780/admin"
-    trace = {
+    trace: dict[str, Any] = {
         "log": {
             "version": "1.2",
             "creator": {"name": "pytest", "version": "1"},
@@ -93,12 +94,11 @@ def test_navigate_task_checks_the_final_order_grid(tmp_path: Path, ending: str) 
         config=WebArenaVerifiedConfig(
             test_data_file=Path(__file__).parents[2] / "assets/dataset/webarena-verified.json",
             environments={
-                "__SHOPPING_ADMIN__": {
-                    "urls": [base_url],
-                    "active_url_idx": 0,
-                    "use_header_login": True,
-                    "credentials": {"username": "admin", "password": "admin1234"},
-                }
+                WebArenaSite.SHOPPING_ADMIN: EnvironmentConfig(
+                    urls=[base_url],
+                    use_header_login=True,
+                    credentials={"username": "admin", "password": "admin1234"},
+                )
             },
         )
     )
@@ -130,12 +130,11 @@ def test_navigate_task_with_empty_har_is_a_normal_failure(tmp_path: Path) -> Non
         config=WebArenaVerifiedConfig(
             test_data_file=Path(__file__).parents[2] / "assets/dataset/webarena-verified.json",
             environments={
-                "__SHOPPING_ADMIN__": {
-                    "urls": [base_url],
-                    "active_url_idx": 0,
-                    "use_header_login": True,
-                    "credentials": {"username": "admin", "password": "admin1234"},
-                }
+                WebArenaSite.SHOPPING_ADMIN: EnvironmentConfig(
+                    urls=[base_url],
+                    use_header_login=True,
+                    credentials={"username": "admin", "password": "admin1234"},
+                )
             },
         )
     )

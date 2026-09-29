@@ -843,10 +843,7 @@ class NetworkEventEvaluator(BaseEvaluator[NetworkEventEvaluatorCfg]):
                 candidate_items = [candidates_by_binding[last_binding_key]] if last_binding_key is not None else []
             else:
                 candidate_items = list(candidates_by_binding.values())
-            candidates = [
-                (candidate, tuple(events_by_stream[stream_key]))
-                for candidate, stream_key in candidate_items
-            ]
+            candidates = [(candidate, tuple(events_by_stream[stream_key])) for candidate, stream_key in candidate_items]
         else:
             candidates = [(config, None)]
 

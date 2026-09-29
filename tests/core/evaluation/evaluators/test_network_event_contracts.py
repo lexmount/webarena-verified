@@ -408,9 +408,7 @@ def test_dynamic_contract_binds_one_value_across_url_and_form_key(wa: WebArenaVe
     assert float(_evaluate(wa, tmp_path, 611, entries).score) == 0.0
 
 
-def test_dynamic_contract_last_event_only_applies_across_runtime_bindings(
-    wa: WebArenaVerified, tmp_path: Path
-) -> None:
+def test_dynamic_contract_last_event_only_applies_across_runtime_bindings(wa: WebArenaVerified, tmp_path: Path) -> None:
     assert float(_evaluate(wa, tmp_path, 611, _dynamic_comment_entries()).score) == 0.0
 
 
