@@ -6,10 +6,12 @@ from typing import Any
 from urllib.parse import urlencode
 
 import pytest
+from pydantic import ValidationError
 
 from webarena_verified import WebArenaVerified
 from webarena_verified.core.evaluation.evaluators.network_event_evaluator import NetworkEventEvaluator
 from webarena_verified.types.eval import TaskEvalContext
+from webarena_verified.types.task import NetworkEventBinding
 from webarena_verified.types.tracing import NetworkTrace
 
 
@@ -552,6 +554,107 @@ def test_members_must_be_added_to_the_project_created_by_the_same_task(
             )
         )
     assert float(_evaluate(wa, tmp_path, task_id, entries).score) == 0.0
+
+
+def test_fields_from_one_source_event_are_bound_atomically(wa: WebArenaVerified, tmp_path: Path) -> None:
+    task = wa.get_task(742)
+    creation, member = task.network_event_evaluator_cfgs[:2]
+    creation = creation.model_copy(update={"last_event_only": False})
+    member = member.model_copy(
+        update={
+            "expected": member.expected.model_copy(
+                update={"url": "__GITLAB__/api/v4/projects/{{project_id}}/namespaces/{{namespace_id}}/members"}
+            ),
+            "bindings": {
+                "project_id": NetworkEventBinding(
+                    source_event="created_project", response_json_path="$.id"
+                ),
+                "namespace_id": NetworkEventBinding(
+                    source_event="created_project", response_json_path="$.namespace.id"
+                ),
+            },
+        }
+    )
+    task = task.model_copy(update={"eval": (task.eval[0], creation, member)})
+
+    def source(project_id: int, namespace_id: int) -> dict[str, Any]:
+        return _entry(
+            method="POST",
+            url="http://localhost:8023/api/v4/projects",
+            post_data=dict(creation.expected.post_data or {}),
+            status=201,
+            response_content={"id": project_id, "namespace": {"id": namespace_id}},
+        )
+
+    def score(consumer_url: str) -> float:
+        entries = [
+            source(111, 10),
+            source(222, 20),
+            _entry(
+                method="POST",
+                url=consumer_url,
+                post_data=dict(member.expected.post_data or {}),
+                status=201,
+            ),
+        ]
+        context = TaskEvalContext(
+            task=task,
+            agent_response_raw=None,
+            network_trace=NetworkTrace.from_content(_write_trace(tmp_path, 742, entries)),
+            config=wa.config,
+        )
+        return float(NetworkEventEvaluator().evaluate(context=context, config=member).score)
+
+    assert score("http://localhost:8023/api/v4/projects/222/namespaces/20/members") == 1.0
+    assert score("http://localhost:8023/api/v4/projects/111/namespaces/20/members") == 0.0
+
+
+def test_response_binding_honors_source_last_event_and_order(wa: WebArenaVerified, tmp_path: Path) -> None:
+    task = wa.get_task(742)
+    creation, member = task.network_event_evaluator_cfgs[:2]
+    entries = [
+        _entry(
+            method="POST",
+            url="http://localhost:8023/api/v4/projects",
+            post_data=dict(creation.expected.post_data or {}),
+            status=201,
+            response_content={"id": 111},
+        ),
+        _entry(
+            method="POST",
+            url="http://localhost:8023/api/v4/projects/111/members",
+            post_data=dict(member.expected.post_data or {}),
+            status=201,
+        ),
+        _entry(
+            method="POST",
+            url="http://localhost:8023/api/v4/projects",
+            post_data=dict(creation.expected.post_data or {}),
+            status=201,
+            response_content={"id": 222},
+        ),
+    ]
+    context = TaskEvalContext(
+        task=task,
+        agent_response_raw=None,
+        network_trace=NetworkTrace.from_content(_write_trace(tmp_path, 742, entries)),
+        config=wa.config,
+    )
+    assert float(NetworkEventEvaluator().evaluate(context=context, config=member).score) == 0.0
+
+
+def test_binding_models_reject_mixed_modes_and_duplicate_sources(wa: WebArenaVerified) -> None:
+    with pytest.raises(ValidationError, match="allowed_values cannot be combined"):
+        NetworkEventBinding(
+            allowed_values=("1",), source_event="created_project", response_json_path="$.id"
+        )
+
+    task = wa.get_task(742)
+    duplicate = task.network_event_evaluator_cfgs[0]
+    task_data = task.model_dump(mode="python")
+    task_data["eval"] = (*task.eval, duplicate)
+    with pytest.raises(ValidationError, match="event_key values must be unique"):
+        type(task).model_validate(task_data)
 
 
 def test_singleton_array_post_contract_is_an_array_not_an_alternative(wa: WebArenaVerified, tmp_path: Path) -> None:

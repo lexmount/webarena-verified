@@ -353,9 +353,18 @@ class WebArenaVerifiedTask(BaseModel):
 
     @model_validator(mode="after")
     def check_eval_has_agent_response(self) -> Self:
-        """Validate that eval contains at least one AgentResponseEval item."""
+        """Validate response coverage and task-local network binding references."""
         if not any(isinstance(item, AgentResponseEvaluatorCfg) for item in self.eval):
             raise ValueError("eval must contain at least one AgentResponseEval item")
+        network_configs = self.network_event_evaluator_cfgs
+        event_keys = [item.event_key for item in network_configs if item.event_key is not None]
+        if len(event_keys) != len(set(event_keys)):
+            raise ValueError("network evaluator event_key values must be unique within a task")
+        known_event_keys = set(event_keys)
+        for config in network_configs:
+            for binding in (config.bindings or {}).values():
+                if binding.source_event is not None and binding.source_event not in known_event_keys:
+                    raise ValueError(f"network binding references unknown source_event {binding.source_event!r}")
         return self
 
     @property

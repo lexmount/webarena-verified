@@ -874,20 +874,38 @@ class NetworkEventEvaluator(BaseEvaluator[NetworkEventEvaluatorCfg]):
         self, context: TaskEvalContext, bindings: Mapping[str, NetworkEventBinding]
     ) -> list[tuple[dict[str, str], int]]:
         """Resolve bindings from closed values or successful earlier event responses."""
-        choices: list[list[tuple[str, int]]] = []
+        choices: list[list[tuple[str, int, str | None]]] = []
         names: list[str] = []
         for name, binding in bindings.items():
             names.append(name)
             if binding.allowed_values:
-                choices.append([(value, -1) for value in binding.allowed_values])
+                choices.append([(value, -1, None) for value in binding.allowed_values])
                 continue
-            choices.append(self._response_binding_values(context, binding))
+            choices.append(
+                [
+                    (value, index, binding.source_event)
+                    for value, index in self._response_binding_values(context, binding)
+                ]
+            )
         if any(not values for values in choices):
             return []
-        return [
-            (dict(zip(names, (value for value, _ in selected), strict=True)), max(index for _, index in selected))
-            for selected in product(*choices)
-        ]
+        candidates: list[tuple[dict[str, str], int]] = []
+        for selected in product(*choices):
+            source_indexes: dict[str, int] = {}
+            for _, index, source_event in selected:
+                if source_event is None:
+                    continue
+                existing = source_indexes.setdefault(source_event, index)
+                if existing != index:
+                    break
+            else:
+                candidates.append(
+                    (
+                        dict(zip(names, (value for value, _, _ in selected), strict=True)),
+                        max(index for _, index, _ in selected),
+                    )
+                )
+        return candidates
 
     def _response_binding_values(
         self, context: TaskEvalContext, binding: NetworkEventBinding
@@ -905,7 +923,14 @@ class NetworkEventEvaluator(BaseEvaluator[NetworkEventEvaluatorCfg]):
             return []
         source_config = source_configs[0]
         values: list[tuple[str, int]] = []
-        for index, event in enumerate(context.network_trace.evaluation_events):
+        events = context.network_trace.evaluation_events
+        matching_events = self._filter_events_by_criteria(events, context, source_config)
+        if source_config.last_event_only and matching_events:
+            matching_events = (matching_events[-1],)
+        selected_ids = {id(event) for event in matching_events}
+        for index, event in enumerate(events):
+            if id(event) not in selected_ids:
+                continue
             source_context = context.model_copy(
                 update={"network_trace": context.network_trace.model_copy(update={"events": (event,)})}
             )
