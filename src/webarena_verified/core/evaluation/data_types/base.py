@@ -244,10 +244,7 @@ class NormalizedType(Generic[T], ABC):
 
         # Step 0: Try to derender URLs (best effort, no exceptions)
         # Let the derender_url_fct decide whether to process the string
-        if self.derender_url_fct is not None and "http" in s:
-            with contextlib.suppress(Exception):
-                s = self.derender_url_fct(s, strict=False)
-                # If derendering fails for any reason, continue with original string
+        s = self._derender_urls(s)
 
         # Step 1: Remove common non-semantic marks BEFORE NFKC normalization
         # U+2122 ™, U+00AE ®, U+2120 ℠, U+00A9 ©
@@ -286,3 +283,13 @@ class NormalizedType(Generic[T], ABC):
 
         # Step 5: Casefold for robust case-insensitive comparison
         return s.casefold()
+
+    def _derender_urls(self, value: str) -> str:
+        """Replace deployment URLs through the configured best-effort callback."""
+        if self.derender_url_fct is None or "http" not in value:
+            return value
+        with contextlib.suppress(Exception):
+            # Evaluators bind the desired strictness when they construct this
+            # callback. Passing it again breaks functools.partial callbacks.
+            return self.derender_url_fct(value)
+        return value

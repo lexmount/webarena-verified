@@ -6,8 +6,9 @@ from pathlib import Path
 import pytest
 
 from webarena_verified.api import WebArenaVerified
-from webarena_verified.types.config import WebArenaVerifiedConfig
+from webarena_verified.types.config import EnvironmentConfig, WebArenaVerifiedConfig
 from webarena_verified.types.eval import EvalStatus
+from webarena_verified.types.task import WebArenaSite
 
 
 @pytest.mark.parametrize(
@@ -26,25 +27,44 @@ from webarena_verified.types.eval import EvalStatus
         ),
     ],
 )
-def test_books_description_reference(
-    task_id: int, answer: list, accepted: bool, tmp_path: Path
-) -> None:
+def test_books_description_reference(task_id: int, answer: list, accepted: bool, tmp_path: Path) -> None:
     trace = tmp_path / "network.har"
-    trace.write_text(json.dumps({"log": {"version": "1.2", "creator": {"name": "pytest", "version": "1"}, "entries": [{
-        "startedDateTime": "2026-01-01T00:00:00.000Z", "time": 1,
-        "request": {"method": "GET", "url": "http://localhost:9999/f/books", "headers": [], "cookies": [], "queryString": []},
-        "response": {"status": 200, "headers": [], "cookies": [], "content": {"size": 0, "mimeType": "text/html", "text": ""}, "redirectURL": ""},
-        "cache": {}, "timings": {"send": 0, "wait": 1, "receive": 0},
-    }]}}))
+    trace.write_text(
+        json.dumps(
+            {
+                "log": {
+                    "version": "1.2",
+                    "creator": {"name": "pytest", "version": "1"},
+                    "entries": [
+                        {
+                            "startedDateTime": "2026-01-01T00:00:00.000Z",
+                            "time": 1,
+                            "request": {
+                                "method": "GET",
+                                "url": "http://localhost:9999/f/books",
+                                "headers": [],
+                                "cookies": [],
+                                "queryString": [],
+                            },
+                            "response": {
+                                "status": 200,
+                                "headers": [],
+                                "cookies": [],
+                                "content": {"size": 0, "mimeType": "text/html", "text": ""},
+                                "redirectURL": "",
+                            },
+                            "cache": {},
+                            "timings": {"send": 0, "wait": 1, "receive": 0},
+                        }
+                    ],
+                }
+            }
+        )
+    )
     evaluator = WebArenaVerified(
         config=WebArenaVerifiedConfig(
             test_data_file=Path(__file__).parents[2] / "assets/dataset/webarena-verified.json",
-            environments={
-                "__REDDIT__": {
-                    "urls": ["http://localhost:9999"],
-                    "active_url_idx": 0,
-                }
-            },
+            environments={WebArenaSite.REDDIT: EnvironmentConfig(urls=["http://localhost:9999"])},
         )
     )
     result = evaluator.evaluate_task(

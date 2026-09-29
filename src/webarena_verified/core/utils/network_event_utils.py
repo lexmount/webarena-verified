@@ -151,7 +151,7 @@ def load_har_trace(har_path: Path) -> tuple["NetworkEvent", ...]:
 
     Raises:
         FileNotFoundError: If HAR file does not exist
-        ValueError: If HAR format is invalid or contains no entries
+        ValueError: If HAR format is invalid
     """
     from webarena_verified.types.tracing import NetworkEvent  # noqa: PLC0415 (circular import)
 
@@ -167,8 +167,8 @@ def load_har_trace(har_path: Path) -> tuple["NetworkEvent", ...]:
         raise ValueError("Invalid HAR format: missing 'log.entries' field")
 
     entries = har_data["log"]["entries"]
-    if not entries:
-        raise ValueError("HAR file contains no entries")
+    if not isinstance(entries, list):
+        raise ValueError("Invalid HAR format: 'log.entries' must be a list")
 
     # Convert HAR entries to NetworkEvent objects
     # HAR entries already have the correct structure with request/response fields

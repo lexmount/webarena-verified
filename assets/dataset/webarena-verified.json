@@ -6722,10 +6722,10 @@
       {
         "evaluator": "NetworkEventEvaluator",
         "ignored_query_params_patterns": [".*"],
-        "expected": {"url": "^.*/route/v1/.*/-68.2177005,44.3494709;-71.0579762,42.3603713.*$"}
+        "expected": {"url": "^.*/route/v1/.*/-71.05777777777777,42.36027777777778;-68.21666666666667,44.35.*$"}
       }
     ],
-    "revision": 4
+    "revision": 6
   },
   {
     "sites": ["wikipedia", "map"],
@@ -6762,10 +6762,10 @@
       {
         "evaluator": "NetworkEventEvaluator",
         "ignored_query_params_patterns": [".*"],
-        "expected": {"url": "^.*/route/v1/.*/-68.2177005,44.3494709;-70.2545299,43.6599147.*$"}
+        "expected": {"url": "^.*/route/v1/.*/-70.255,43.66;-68.21666666666667,44.35.*$"}
       }
     ],
-    "revision": 4
+    "revision": 6
   },
   {
     "sites": ["wikipedia", "map"],
@@ -6803,12 +6803,12 @@
         "evaluator": "NetworkEventEvaluator",
         "ignored_query_params_patterns": [".*"],
         "expected": {
-          "url": "^.*/route/.*/-68.2177005,44.3494709;-68.767507,44.8030715.*$",
+          "url": "^.*/route/.*/-68.7675,44.80305555555555;-68.21666666666667,44.35.*$",
           "headers": {"Cookie": "^(?!.*_osm_directions_engine=fossgis_osrm_(?:bicycle|foot)).*$"}
         }
       }
     ],
-    "revision": 4
+    "revision": 6
   },
   {
     "sites": ["wikipedia", "map"],
@@ -6846,12 +6846,12 @@
         "evaluator": "NetworkEventEvaluator",
         "ignored_query_params_patterns": [".*"],
         "expected": {
-          "url": "^.*/route/v1/.*/-68.2177005,44.3494709;-68.8315387,44.0478975.*$",
+          "url": "^.*/route/v1/.*/-68.83166666666666,44.04805555555556;-68.21666666666667,44.35.*$",
           "headers": {"Cookie": "^.*_osm_directions_engine=fossgis_osrm_bicycle.*$"}
         }
       }
     ],
-    "revision": 4
+    "revision": 6
   },
   {
     "sites": ["shopping"],
@@ -10821,15 +10821,17 @@
       },
       {
         "evaluator": "NetworkEventEvaluator",
-        "last_event_only": false,
+        "last_event_only": true,
+        "navigation_only": false,
         "expected": {
-          "url": "^__SHOPPING_ADMIN__/catalog/product/save/id/126/type/configurable/store/0/set/\\d+/back/edit$",
-          "post_data": {"report_type": "created_at_order", "from": "02/1/2023", "to": "02/28/2023"},
+          "url": "^__SHOPPING_ADMIN__/catalog/product/massStatus/status/1/?$",
+          "http_method": "POST",
+          "post_data": {"excluded": "false", "search": "hollister", "namespace": "product_listing"},
           "response_status": 302
         }
       }
     ],
-    "revision": 2
+    "revision": 3
   },
   {
     "sites": ["wikipedia", "map"],
@@ -14578,17 +14580,6 @@
       },
       {
         "evaluator": "NetworkEventEvaluator",
-        "expected": {
-          "url": "__SHOPPING_ADMIN__/catalog/product_attribute/save/attribute_id/93",
-          "http_method": "POST",
-          "response_status": 302,
-          "post_data": {
-            "serialized_options": "^.*swatchtext%5Bvalue%5D%5Boption_\\d+%5D%5B0%5D=Brown.*$"
-          }
-        }
-      },
-      {
-        "evaluator": "NetworkEventEvaluator",
         "post_data_schema": {
           "type": "object",
           "properties": {
@@ -14606,7 +14597,7 @@
         }
       }
     ],
-    "revision": 2
+    "revision": 3
   },
   {
     "sites": ["shopping_admin"],
@@ -14628,17 +14619,6 @@
       },
       {
         "evaluator": "NetworkEventEvaluator",
-        "expected": {
-          "url": "__SHOPPING_ADMIN__/catalog/product_attribute/save/attribute_id/93",
-          "http_method": "POST",
-          "response_status": 302,
-          "post_data": {
-            "serialized_options": "^.*swatchtext%5Bvalue%5D%5Boption_\\d+%5D%5B0%5D=Blue.*$"
-          }
-        }
-      },
-      {
-        "evaluator": "NetworkEventEvaluator",
         "post_data_schema": {
           "type": "object",
           "properties": {
@@ -14650,13 +14630,13 @@
           "http_method": "POST",
           "response_status": 302,
           "post_data": {
-            "product[name]": "Frankie Sweatshirt",
+            "product[name]": "Frankie  Sweatshirt",
             "$['configurable-matrix-serialized'][?(@.newProduct == 1)].attributes": ["size: s, color: blue", "size: m, color: blue"]
           }
         }
       }
     ],
-    "revision": 2
+    "revision": 3
   },
   {
     "sites": ["shopping_admin"],
@@ -14678,12 +14658,17 @@
       },
       {
         "evaluator": "NetworkEventEvaluator",
+        "last_event_only": true,
+        "navigation_only": false,
+        "ignored_query_params": ["isAjax"],
         "expected": {
-          "url": "__SHOPPING_ADMIN__/catalog/product_attribute/save/attribute_id/144",
+          "url": "^__SHOPPING_ADMIN__/catalog/product_attribute/createOptions/?$",
           "http_method": "POST",
-          "response_status": 302,
+          "response_status": 200,
           "post_data": {
-            "serialized_options": "^.*swatchtext%5Bvalue%5D%5Boption_\\d+%5D%5B0%5D=XXXL.*$"
+            "options[0][label]": "XXXL",
+            "options[0][attribute_id]": "144",
+            "options[0][is_new]": "true"
           }
         }
       },
@@ -14706,7 +14691,7 @@
         }
       }
     ],
-    "revision": 2
+    "revision": 3
   },
   {
     "sites": ["shopping_admin"],
@@ -14728,12 +14713,17 @@
       },
       {
         "evaluator": "NetworkEventEvaluator",
+        "last_event_only": true,
+        "navigation_only": false,
+        "ignored_query_params": ["isAjax"],
         "expected": {
-          "url": "__SHOPPING_ADMIN__/catalog/product_attribute/save/attribute_id/144",
+          "url": "^__SHOPPING_ADMIN__/catalog/product_attribute/createOptions/?$",
           "http_method": "POST",
-          "response_status": 302,
+          "response_status": 200,
           "post_data": {
-            "serialized_options": "^.*&swatchtext%5Bvalue%5D%5Boption_\\d+%5D%5B0%5D=XXS.*$"
+            "options[0][label]": "XXS",
+            "options[0][attribute_id]": "144",
+            "options[0][is_new]": "true"
           }
         }
       },
@@ -14756,7 +14746,7 @@
         }
       }
     ],
-    "revision": 2
+    "revision": 3
   },
   {
     "sites": ["shopping_admin"],
@@ -15512,7 +15502,7 @@
           "properties": { "$.actions[0].content": {"type": "string", "format": "markdown"} }
         },
         "expected": {
-          "url": "__GITLAB__//api/v4/projects/byteblaze%2Fdo-it-myself-with/repository/commits",
+          "url": "__GITLAB__/api/v4/projects/byteblaze%2Fdo-it-myself/repository/commits",
           "http_method": "POST",
           "post_data": {
             "branch": "main",
@@ -15525,7 +15515,7 @@
         }
       }
     ],
-    "revision": 2
+    "revision": 3
   },
   {
     "sites": ["gitlab"],
@@ -15546,6 +15536,7 @@
       },
       {
         "evaluator": "NetworkEventEvaluator",
+        "last_event_only": false,
         "expected": {
           "url": "__GITLAB__/api/v4/projects/184/members",
           "http_method": "POST",
@@ -15555,6 +15546,7 @@
       },
       {
         "evaluator": "NetworkEventEvaluator",
+        "last_event_only": false,
         "expected": {
           "url": "__GITLAB__/api/v4/projects/184/members",
           "http_method": "POST",
@@ -15563,7 +15555,7 @@
         }
       }
     ],
-    "revision": 2
+    "revision": 3
   },
   {
     "sites": ["gitlab"],
@@ -15581,6 +15573,7 @@
       },
       {
         "evaluator": "NetworkEventEvaluator",
+        "last_event_only": false,
         "expected": {
           "url": "__GITLAB__/api/v4/projects/174/members",
           "http_method": "POST",
@@ -15590,6 +15583,7 @@
       },
       {
         "evaluator": "NetworkEventEvaluator",
+        "last_event_only": false,
         "expected": {
           "url": "__GITLAB__/api/v4/projects/174/members",
           "http_method": "POST",
@@ -15598,7 +15592,7 @@
         }
       }
     ],
-    "revision": 2
+    "revision": 3
   },
   {
     "sites": ["gitlab"],
@@ -15619,6 +15613,7 @@
       },
       {
         "evaluator": "NetworkEventEvaluator",
+        "last_event_only": false,
         "expected": {
           "url": "__GITLAB__/api/v4/projects/185/members",
           "http_method": "POST",
@@ -15628,6 +15623,7 @@
       },
       {
         "evaluator": "NetworkEventEvaluator",
+        "last_event_only": false,
         "expected": {
           "url": "__GITLAB__/api/v4/projects/185/members",
           "http_method": "POST",
@@ -15636,7 +15632,7 @@
         }
       }
     ],
-    "revision": 2
+    "revision": 3
   },
   {
     "sites": ["gitlab"],
@@ -15657,6 +15653,7 @@
       },
       {
         "evaluator": "NetworkEventEvaluator",
+        "last_event_only": false,
         "expected": {
           "url": "__GITLAB__/api/v4/projects/190/members",
           "http_method": "POST",
@@ -15666,6 +15663,7 @@
       },
       {
         "evaluator": "NetworkEventEvaluator",
+        "last_event_only": false,
         "expected": {
           "url": "__GITLAB__/api/v4/projects/190/members",
           "http_method": "POST",
@@ -15675,6 +15673,7 @@
       },
       {
         "evaluator": "NetworkEventEvaluator",
+        "last_event_only": false,
         "expected": {
           "url": "__GITLAB__/api/v4/projects/190/members",
           "http_method": "POST",
@@ -15684,6 +15683,7 @@
       },
       {
         "evaluator": "NetworkEventEvaluator",
+        "last_event_only": false,
         "expected": {
           "url": "__GITLAB__/api/v4/projects/190/members",
           "http_method": "POST",
@@ -15692,7 +15692,7 @@
         }
       }
     ],
-    "revision": 2
+    "revision": 3
   },
   {
     "sites": ["shopping"],
@@ -16817,10 +16817,11 @@
             "submission[forum]": "{{forum_id}}"
           },
           "response_status": 302
-        }
+        },
+        "bindings": { "forum_id": { "allowed_values": ["10043", "10018", "10078"] } }
       }
     ],
-    "revision": 2
+    "revision": 3
   },
   {
     "sites": ["reddit"],
@@ -17036,7 +17037,8 @@
           "http_method": "POST",
           "post_data": {"submission[title]": "Harry Potter", "submission[forum]": "10037"},
           "response_status": 302
-        }
+        },
+        "event_key": "created_post"
       },
       {
         "evaluator": "NetworkEventEvaluator",
@@ -17045,10 +17047,16 @@
           "http_method": "POST",
           "post_data": {"reply_to_submission_{{post_id}}[comment]": "Wonderful journey"},
           "response_status": 302
+        },
+        "bindings": {
+          "post_id": {
+            "source_event": "created_post",
+            "response_url_pattern": "^__REDDIT__/f/books/(?P<value>\\d+)(?:/.*)?$"
+          }
         }
       }
     ],
-    "revision": 2
+    "revision": 3
   },
   {
     "sites": ["reddit"],
@@ -17071,7 +17079,8 @@
           "http_method": "POST",
           "post_data": {"submission[title]": "big little lies", "submission[forum]": "10037"},
           "response_status": 302
-        }
+        },
+        "event_key": "created_post"
       },
       {
         "evaluator": "NetworkEventEvaluator",
@@ -17080,10 +17089,16 @@
           "http_method": "POST",
           "post_data": {"reply_to_submission_{{post_id}}[comment]": "can't stop it"},
           "response_status": 302
+        },
+        "bindings": {
+          "post_id": {
+            "source_event": "created_post",
+            "response_url_pattern": "^__REDDIT__/f/books/(?P<value>\\d+)(?:/.*)?$"
+          }
         }
       }
     ],
-    "revision": 2
+    "revision": 3
   },
   {
     "sites": ["reddit"],
@@ -17106,7 +17121,8 @@
           "http_method": "POST",
           "post_data": {"submission[title]": "Love story", "submission[forum]": "10037"},
           "response_status": 302
-        }
+        },
+        "event_key": "created_post"
       },
       {
         "evaluator": "NetworkEventEvaluator",
@@ -17115,10 +17131,16 @@
           "http_method": "POST",
           "post_data": {"reply_to_submission_{{post_id}}[comment]": "I cried"},
           "response_status": 302
+        },
+        "bindings": {
+          "post_id": {
+            "source_event": "created_post",
+            "response_url_pattern": "^__REDDIT__/f/books/(?P<value>\\d+)(?:/.*)?$"
+          }
         }
       }
     ],
-    "revision": 2
+    "revision": 3
   },
   {
     "sites": ["reddit"],
@@ -17141,7 +17163,8 @@
           "http_method": "POST",
           "post_data": {"submission[title]": "Gone with the wind", "submission[forum]": "10037"},
           "response_status": 302
-        }
+        },
+        "event_key": "created_post"
       },
       {
         "evaluator": "NetworkEventEvaluator",
@@ -17150,10 +17173,16 @@
           "http_method": "POST",
           "post_data": {"reply_to_submission_{{post_id}}[comment]": "It's a book with history"},
           "response_status": 302
+        },
+        "bindings": {
+          "post_id": {
+            "source_event": "created_post",
+            "response_url_pattern": "^__REDDIT__/f/books/(?P<value>\\d+)(?:/.*)?$"
+          }
         }
       }
     ],
-    "revision": 2
+    "revision": 3
   },
   {
     "sites": ["reddit"],
@@ -19091,6 +19120,7 @@
       },
       {
         "evaluator": "NetworkEventEvaluator",
+        "navigation_only": false,
         "expected": {
           "url": "__SHOPPING_ADMIN__/mui/index/render/",
           "headers": {"referer": "__SHOPPING_ADMIN__/sales/order/"},
@@ -19105,7 +19135,7 @@
         "ignored_query_params_patterns": ["^paging", "^sorting", "isAjax"]
       }
     ],
-    "revision": 2
+    "revision": 3
   },
   {
     "sites": ["shopping_admin"],
@@ -19123,6 +19153,7 @@
       },
       {
         "evaluator": "NetworkEventEvaluator",
+        "navigation_only": false,
         "expected": {
           "url": "__SHOPPING_ADMIN__/mui/index/render/",
           "headers": {"referer": "__SHOPPING_ADMIN__/sales/order/"},
@@ -19137,7 +19168,7 @@
         "ignored_query_params_patterns": ["^paging", "^sorting", "isAjax"]
       }
     ],
-    "revision": 2
+    "revision": 3
   },
   {
     "sites": ["shopping_admin"],
@@ -19155,6 +19186,7 @@
       },
       {
         "evaluator": "NetworkEventEvaluator",
+        "navigation_only": false,
         "expected": {
           "url": "^__SHOPPING_ADMIN__/mui/index/render/.*$",
           "query_params": {
@@ -19170,7 +19202,7 @@
         "decode_base64_query": true
       }
     ],
-    "revision": 2
+    "revision": 3
   },
   {
     "sites": ["shopping_admin"],
@@ -19188,6 +19220,7 @@
       },
       {
         "evaluator": "NetworkEventEvaluator",
+        "navigation_only": false,
         "expected": {
           "url": "__SHOPPING_ADMIN__/mui/index/render/",
           "headers": {"referer": "__SHOPPING_ADMIN__/sales/order/"},
@@ -19202,7 +19235,7 @@
         "ignored_query_params_patterns": ["^paging", "^sorting", "isAjax"]
       }
     ],
-    "revision": 2
+    "revision": 3
   },
   {
     "sites": ["reddit", "gitlab"],
@@ -19862,13 +19895,15 @@
             "name": "spring sale",
             "website_ids[0]": "1",
             "customer_group_ids[0]": "1",
+            "customer_group_ids[1]": "2",
+            "customer_group_ids[2]": "3",
             "simple_action": "by_percent",
             "discount_amount": 20
           }
         }
       }
     ],
-    "revision": 3
+    "revision": 4
   },
   {
     "sites": ["shopping_admin"],
@@ -19894,13 +19929,15 @@
             "name": "fall discount",
             "website_ids[0]": "1",
             "customer_group_ids[0]": "1",
+            "customer_group_ids[1]": "2",
+            "customer_group_ids[2]": "3",
             "simple_action": "cart_fixed",
             "discount_amount": 10
           }
         }
       }
     ],
-    "revision": 3
+    "revision": 4
   },
   {
     "sites": ["shopping_admin"],
@@ -21374,11 +21411,12 @@
       },
       {
         "evaluator": "NetworkEventEvaluator",
+        "navigation_only": false,
         "ignored_query_params_patterns": [".*"],
-        "expected": {"url": "^.*/route/v1/.*/-75.1718916,39.9011873;-79.9427192,40.4441897.*$"}
+        "expected": {"url": "^.*/route/v1/.*/-79.9427192,40.4441897;-75.1718916,39.9011873.*$"}
       }
     ],
-    "revision": 2
+    "revision": 3
   },
   {
     "sites": ["wikipedia", "map"],
@@ -21400,11 +21438,12 @@
       },
       {
         "evaluator": "NetworkEventEvaluator",
+        "navigation_only": false,
         "ignored_query_params_patterns": [".*"],
-        "expected": {"url": "^.*/route/v1/.*/-75.1712951,39.9042046;-79.9427192,40.4441897.*$"}
+        "expected": {"url": "^.*/route/v1/.*/-79.9427192,40.4441897;-75.1712951,39.9042046.*$"}
       }
     ],
-    "revision": 2
+    "revision": 3
   },
   {
     "sites": ["wikipedia", "map"],
@@ -21426,11 +21465,12 @@
       },
       {
         "evaluator": "NetworkEventEvaluator",
+        "navigation_only": false,
         "ignored_query_params_patterns": [".*"],
-        "expected": {"url": "^.*/route/v1/.*/-73.9265212,40.8295828;-79.9427192,40.4441897.*$"}
+        "expected": {"url": "^.*/route/v1/.*/-79.9427192,40.4441897;-73.9265212,40.8295828.*$"}
       }
     ],
-    "revision": 2
+    "revision": 3
   },
   {
     "sites": ["wikipedia", "map"],
@@ -21452,11 +21492,12 @@
       },
       {
         "evaluator": "NetworkEventEvaluator",
+        "navigation_only": false,
         "ignored_query_params_patterns": [".*"],
-        "expected": {"url": "^.*/route/v1/.*/-73.9935443,40.7505085;-79.9427192,40.4441897.*$"}
+        "expected": {"url": "^.*/route/v1/.*/-79.9427192,40.4441897;-73.9935443,40.7505085.*$"}
       }
     ],
-    "revision": 2
+    "revision": 3
   },
   {
     "sites": ["wikipedia", "map"],
@@ -21478,11 +21519,12 @@
       },
       {
         "evaluator": "NetworkEventEvaluator",
+        "navigation_only": false,
         "ignored_query_params_patterns": [".*"],
-        "expected": {"url": "^.*/route/v1/.*/-71.0621475,42.3662922;-79.9427192,40.4441897.*$"}
+        "expected": {"url": "^.*/route/v1/.*/-79.9427192,40.4441897;-71.0621475,42.3662922.*$"}
       }
     ],
-    "revision": 2
+    "revision": 3
   },
   {
     "sites": ["gitlab"],
@@ -21509,28 +21551,37 @@
           "http_method": "POST",
           "post_data": {"name": "planner", "visibility": "private"},
           "response_status": 201
-        }
+        },
+        "event_key": "created_project"
       },
       {
         "evaluator": "NetworkEventEvaluator",
+        "last_event_only": false,
         "expected": {
-          "url": "^__GITLAB__/api/v4/projects/\\d+/members$",
+          "url": "__GITLAB__/api/v4/projects/{{project_id}}/members",
           "http_method": "POST",
           "post_data": {"user_id": 5, "access_level": 30},
           "response_status": 201
+        },
+        "bindings": {
+          "project_id": {"source_event": "created_project", "response_json_path": "$.id"}
         }
       },
       {
         "evaluator": "NetworkEventEvaluator",
+        "last_event_only": false,
         "expected": {
-          "url": "^__GITLAB__/api/v4/projects/\\d+/members$",
+          "url": "__GITLAB__/api/v4/projects/{{project_id}}/members",
           "http_method": "POST",
           "post_data": {"user_id": 278, "access_level": 30},
           "response_status": 201
+        },
+        "bindings": {
+          "project_id": {"source_event": "created_project", "response_json_path": "$.id"}
         }
       }
     ],
-    "revision": 2
+    "revision": 4
   },
   {
     "sites": ["gitlab"],
@@ -21557,28 +21608,37 @@
           "http_method": "POST",
           "post_data": {"name": "web_arena", "visibility": "public"},
           "response_status": 201
-        }
+        },
+        "event_key": "created_project"
       },
       {
         "evaluator": "NetworkEventEvaluator",
+        "last_event_only": false,
         "expected": {
-          "url": "^__GITLAB__/api/v4/projects/\\d+/members$",
+          "url": "__GITLAB__/api/v4/projects/{{project_id}}/members",
           "http_method": "POST",
           "post_data": {"user_id": 5, "access_level": 30},
           "response_status": 201
+        },
+        "bindings": {
+          "project_id": {"source_event": "created_project", "response_json_path": "$.id"}
         }
       },
       {
         "evaluator": "NetworkEventEvaluator",
+        "last_event_only": false,
         "expected": {
-          "url": "^__GITLAB__/api/v4/projects/\\d+/members$",
+          "url": "__GITLAB__/api/v4/projects/{{project_id}}/members",
           "http_method": "POST",
           "post_data": {"user_id": 278, "access_level": 30},
           "response_status": 201
+        },
+        "bindings": {
+          "project_id": {"source_event": "created_project", "response_json_path": "$.id"}
         }
       }
     ],
-    "revision": 2
+    "revision": 4
   },
   {
     "sites": ["gitlab"],
@@ -21644,37 +21704,50 @@
           "http_method": "POST",
           "post_data": {"name": "awesome-llms", "visibility": "public"},
           "response_status": 201
-        }
+        },
+        "event_key": "created_project"
       },
       {
         "evaluator": "NetworkEventEvaluator",
+        "last_event_only": false,
         "expected": {
-          "url": "^__GITLAB__/api/v4/projects/\\d+/members$",
+          "url": "__GITLAB__/api/v4/projects/{{project_id}}/members",
           "http_method": "POST",
           "post_data": {"user_id": 2367, "access_level": 30},
           "response_status": 201
+        },
+        "bindings": {
+          "project_id": {"source_event": "created_project", "response_json_path": "$.id"}
         }
       },
       {
         "evaluator": "NetworkEventEvaluator",
+        "last_event_only": false,
         "expected": {
-          "url": "^__GITLAB__/api/v4/projects/\\d+/members$",
+          "url": "__GITLAB__/api/v4/projects/{{project_id}}/members",
           "http_method": "POST",
           "post_data": {"user_id": 43, "access_level": 30},
           "response_status": 201
+        },
+        "bindings": {
+          "project_id": {"source_event": "created_project", "response_json_path": "$.id"}
         }
       },
       {
         "evaluator": "NetworkEventEvaluator",
+        "last_event_only": false,
         "expected": {
-          "url": "^__GITLAB__/api/v4/projects/\\d+/members$",
+          "url": "__GITLAB__/api/v4/projects/{{project_id}}/members",
           "http_method": "POST",
           "post_data": {"user_id": 5, "access_level": 30},
           "response_status": 201
+        },
+        "bindings": {
+          "project_id": {"source_event": "created_project", "response_json_path": "$.id"}
         }
       }
     ],
-    "revision": 2
+    "revision": 4
   },
   {
     "sites": ["gitlab"],
@@ -21701,37 +21774,50 @@
           "http_method": "POST",
           "post_data": {"name": "llm_bulk_inference", "visibility": "private"},
           "response_status": 201
-        }
+        },
+        "event_key": "created_project"
       },
       {
         "evaluator": "NetworkEventEvaluator",
+        "last_event_only": false,
         "expected": {
-          "url": "^__GITLAB__/api/v4/projects/\\d+/members$",
+          "url": "__GITLAB__/api/v4/projects/{{project_id}}/members",
           "http_method": "POST",
           "post_data": {"user_id": 2367, "access_level": 30},
           "response_status": 201
+        },
+        "bindings": {
+          "project_id": {"source_event": "created_project", "response_json_path": "$.id"}
         }
       },
       {
         "evaluator": "NetworkEventEvaluator",
+        "last_event_only": false,
         "expected": {
-          "url": "^__GITLAB__/api/v4/projects/\\d+/members$",
+          "url": "__GITLAB__/api/v4/projects/{{project_id}}/members",
           "http_method": "POST",
           "post_data": {"user_id": 43, "access_level": 30},
           "response_status": 201
+        },
+        "bindings": {
+          "project_id": {"source_event": "created_project", "response_json_path": "$.id"}
         }
       },
       {
         "evaluator": "NetworkEventEvaluator",
+        "last_event_only": false,
         "expected": {
-          "url": "^__GITLAB__/api/v4/projects/\\d+/members$",
+          "url": "__GITLAB__/api/v4/projects/{{project_id}}/members",
           "http_method": "POST",
           "post_data": {"user_id": 5, "access_level": 30},
           "response_status": 201
+        },
+        "bindings": {
+          "project_id": {"source_event": "created_project", "response_json_path": "$.id"}
         }
       }
     ],
-    "revision": 2
+    "revision": 4
   },
   {
     "sites": ["gitlab"],
@@ -22218,14 +22304,15 @@
       },
       {
         "evaluator": "NetworkEventEvaluator",
+        "navigation_only": false,
         "ignored_query_params_patterns": [".*"],
         "expected": {
-          "url": "^.*/route/v1/.*/-71.060511,42.3554334;-1.4869496,55.0252998.*$",
+          "url": "^.*/route/v1/.*/-71.060511,42.3554334;-74.0060152,40.7127281.*$",
           "headers": {"Cookie": "^(?!.*_osm_directions_engine=fossgis_osrm_(?:bicycle|foot)).*$"}
         }
       }
     ],
-    "revision": 2
+    "revision": 4
   },
   {
     "sites": ["map", "shopping_admin"],
@@ -22247,14 +22334,15 @@
       },
       {
         "evaluator": "NetworkEventEvaluator",
+        "navigation_only": false,
         "ignored_query_params_patterns": [".*"],
         "expected": {
-          "url": "^.*/route/v1/.*/-75.4716115,40.6022552;-74.4041622,40.0757384.*$",
+          "url": "^.*/route/v1/.*/-75.4716115,40.6022552;-74.0323752,40.7433066.*$",
           "headers": {"Cookie": "^(?!.*_osm_directions_engine=fossgis_osrm_(?:bicycle|foot)).*$"}
         }
       }
     ],
-    "revision": 2
+    "revision": 6
   },
   {
     "sites": ["map"],
@@ -23951,6 +24039,12 @@
       {
         "evaluator": "NetworkEventEvaluator",
         "ignored_query_params": ["serializer"],
+        "post_data_schema": {
+          "type": "object",
+          "properties": {
+            "$.issue.assignee_ids": {"type": "array", "items": {"type": "integer"}}
+          }
+        },
         "expected": {
           "url": "__GITLAB__/a11yproject/a11yproject.com/-/issues/1478.json",
           "http_method": "PUT",
@@ -23958,6 +24052,6 @@
         }
       }
     ],
-    "revision": 2
+    "revision": 3
   }
 ]

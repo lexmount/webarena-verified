@@ -40,7 +40,7 @@ class MarkdownString(NormalizedType[str]):
 
         We only strip leading/trailing whitespace.
         """
-        return s.strip()
+        return self._derender_urls(s).strip()
 
     def _type_normalize(self, value: Any) -> str:
         """Normalize markdown string for comparison.

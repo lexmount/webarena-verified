@@ -91,7 +91,11 @@ class AgentResponseEvaluator(BaseEvaluator[AgentResponseEvaluatorCfg]):
             return value
 
         _normalized_values = {}
-        for k in config.expected.model_fields_set:
+        # Normalize every field in the canonical expected response. Pydantic's
+        # ``model_fields_set`` omits defaulted ``retrieved_data`` for tasks
+        # whose dataset contract expects no data, even though the normalized
+        # expected value contains that field as ``None``.
+        for k in normalized_expected:
             if k == "task_type" and k not in value and "performed_operation" in value:
                 k = "performed_operation"  # Support legacy field name
 

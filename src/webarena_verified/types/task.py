@@ -1,5 +1,6 @@
 """Data models for WebArena Verified tasks (version >= 2.0.0)."""
 
+import re
 from enum import StrEnum
 from typing import Annotated, Any, Generic, Literal, Self, TypeVar
 
@@ -187,6 +188,40 @@ class NetworkEventSpec(BaseModel):
     """
 
 
+class NetworkEventBinding(BaseModel):
+    """Trusted source for a runtime placeholder in a network contract.
+
+    A binding is either selected from a closed set of allowed values or extracted
+    from the successful response of a named earlier network contract.
+    """
+
+    allowed_values: tuple[NonEmptyStr, ...] | None = None
+    source_event: NonEmptyStr | None = None
+    response_json_path: NonEmptyStr | None = None
+    response_url_pattern: NonEmptyStr | None = None
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    @model_validator(mode="after")
+    def check_source(self) -> Self:
+        """Require one unambiguous trusted source mode."""
+        response_sources = [self.response_json_path, self.response_url_pattern]
+        if self.allowed_values:
+            if self.source_event is not None or any(response_sources):
+                raise ValueError("allowed_values cannot be combined with a response source")
+            return self
+        if self.source_event is None or sum(value is not None for value in response_sources) != 1:
+            raise ValueError(
+                "a response binding requires source_event and exactly one of "
+                "response_json_path or response_url_pattern"
+            )
+        if self.response_url_pattern is not None:
+            pattern = re.compile(self.response_url_pattern)
+            if "value" not in pattern.groupindex:
+                raise ValueError("response_url_pattern must contain a named 'value' capture group")
+        return self
+
+
 class NetworkEventEvaluatorCfg(BaseEval[NetworkEventSpec]):
     """Validates network events by checking URL, headers, query params, status, event type, and method.
 
@@ -224,6 +259,12 @@ class NetworkEventEvaluatorCfg(BaseEval[NetworkEventSpec]):
     """
 
     evaluator: Literal["NetworkEventEvaluator"] = "NetworkEventEvaluator"
+
+    event_key: NonEmptyStr | None = None
+    """Optional task-local name for this event when later contracts bind to its response."""
+
+    bindings: dict[NonEmptyStr, NetworkEventBinding] | None = None
+    """Trusted sources for placeholders used by this contract."""
 
     last_event_only: bool = True
     """If True, validate only the last matching event. If False, validate if ANY event matches."""
@@ -312,9 +353,18 @@ class WebArenaVerifiedTask(BaseModel):
 
     @model_validator(mode="after")
     def check_eval_has_agent_response(self) -> Self:
-        """Validate that eval contains at least one AgentResponseEval item."""
+        """Validate response coverage and task-local network binding references."""
         if not any(isinstance(item, AgentResponseEvaluatorCfg) for item in self.eval):
             raise ValueError("eval must contain at least one AgentResponseEval item")
+        network_configs = self.network_event_evaluator_cfgs
+        event_keys = [item.event_key for item in network_configs if item.event_key is not None]
+        if len(event_keys) != len(set(event_keys)):
+            raise ValueError("network evaluator event_key values must be unique within a task")
+        known_event_keys = set(event_keys)
+        for config in network_configs:
+            for binding in (config.bindings or {}).values():
+                if binding.source_event is not None and binding.source_event not in known_event_keys:
+                    raise ValueError(f"network binding references unknown source_event {binding.source_event!r}")
         return self
 
     @property
